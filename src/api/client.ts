@@ -30,7 +30,7 @@ class APIClient {
 
     // Private //
     
-    decode<T>(type: new (...args: any[]) => T, args): T {
+    protected decode<T>(type: new (...args: any[]) => T, args): T {
         return new type(...args);
     }
     
@@ -38,19 +38,19 @@ class APIClient {
     //     return items.map(s => this.decode(type, args));
     // }
     
-    decodeProcedures: (symbols: SymbolData[]) => Procedure[] = (items) => {
+    protected decodeProcedures: (symbols: SymbolData[]) => Procedure[] = (items) => {
         return items.map(s => this.decode(Procedure, [s.label, s.address, s.segment]));
     }
     
-    decodeSymbols: (symbols: SymbolData[]) => Symbol[] = (items) => {
+    protected decodeSymbols: (symbols: SymbolData[]) => Symbol[] = (items) => {
         return items.map(s => this.decode(Symbol, [s.label, s.address, s.segment]));
     }
     
-    decodeSegments: (names: string[]) => Segment[] = (items) => {
+    protected decodeSegments: (names: string[]) => Segment[] = (items) => {
         return items.map(s => this.decode(Segment, [s]));
     }
 
-    sendRequest<T>(method: string, endpoint: string, params: object): Promise<T> {
+    protected sendRequest<T>(method: string, endpoint: string, params: object): Promise<T> {        
         return fetch(this.baseURL + endpoint, {
             method: method,
             headers: {
@@ -71,11 +71,11 @@ class APIClient {
         });
     }
 
-    get<T>(endpoint: string, bodyParams: object = {}): Promise<T> {
+    protected get<T>(endpoint: string, bodyParams: object = {}): Promise<T> {
         return this.sendRequest('GET', endpoint, bodyParams);
     }
 
-    post<T>(endpoint: string, bodyParams: object = {}): Promise<T> {
+    protected post<T>(endpoint: string, bodyParams: object = {}): Promise<T> {
         return this.sendRequest('POST', endpoint, bodyParams).then((response: ProxyResponse<T>) => {
             if (response.error) {
                 throw response.error;
@@ -85,7 +85,7 @@ class APIClient {
         });
     }
 
-    parseIntsToStrings<T>(obj: any): T {
+    protected parseIntsToStrings<T>(obj: any): T {
         for (let key in obj) {
             if (!isNaN(obj[key]) && obj[key] !== null) {
                 obj[key] = parseInt(obj[key]);
