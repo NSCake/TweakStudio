@@ -117,8 +117,8 @@ class APIClient {
     
     // Decompile //
     
-    decompileProcedure(segment: string, address: number): Promise<string> {
-        return this.post(Endpoint.decompile, { segment_name: segment, procedure_address: address });
+    decompileProcedure(address: number): Promise<string> {
+        return this.post(Endpoint.decompile, { procedure_address: address });
     }
 
     // Search //
