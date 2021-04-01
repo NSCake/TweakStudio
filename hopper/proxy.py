@@ -194,8 +194,18 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
 
-    httpd = HTTPServer(("", 52349), RequestHandler)
+    # Create server with first available port
+    httpd = HTTPServer(("", 0), RequestHandler)
+    
+    # Notify extension of our port
+    port = 0 # TODO: how do you get the port from httpd?
+    host = 'localhost' + os.environ["SERVER_PORT"]
+    connection = http.client.HTTPSConnection(host)
+    headers = {'Content-type': 'application/json'}
+    body = json.dumps({'port': port})
+    connection.request('POST', '/tweakstudio/hopper', body, headers)
 
+    # Begin serving requests
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
