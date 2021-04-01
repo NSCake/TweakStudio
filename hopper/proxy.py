@@ -162,7 +162,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         data_response = None
         error = None
 
-        for handler in [ListSegments, ListProcedures, DecompileProcedure, TerminateHopper, ListStrings, DisassembleProcedure]:
+        for handler in [
+            ListSegments,
+            ListProcedures,
+            DecompileProcedure,
+            TerminateHopper,
+            ListStrings,
+            DisassembleProcedure,
+        ]:
             if self.path == handler.PATH:
 
                 try:
