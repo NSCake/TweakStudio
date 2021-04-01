@@ -22,12 +22,10 @@ function isError(obj: any): obj is Error {
 }
 
 class APIClient {
-    baseURL: string;
-    userToken: string | null;
-    signedIn: boolean;
+    protected baseURL: string
 
-    constructor() {
-        this.baseURL = "http://localhost:" + 52349;
+    constructor(port: number) {
+        this.baseURL = `http://localhost:${port}`;
     }
 
     // Private //

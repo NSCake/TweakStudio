@@ -9,7 +9,6 @@
 import APIClient from "./client";
 
 class HopperClient extends APIClient {
-    static shared = new HopperClient();
 }
 
 export default HopperClient;
