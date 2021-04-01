@@ -6,11 +6,11 @@
 //  Copyright © 2021 Tanner Bennett. All rights reserved.
 //
 
-import { TreeItem, TreeDataProvider, ProviderResult } from 'vscode';
+import { TreeItem, ProviderResult } from 'vscode';
 import { Procedure } from '../api/model';
-import HopperClient from '../api/hopper';
+import BaseProvider from './base-provider';
 
-export class ProceduresProvider implements TreeDataProvider<Procedure> {
+export class ProceduresProvider extends BaseProvider<Procedure> {
     // private _onDidChangeTreeData: EventEmitter<Symbol | undefined | null | void> = new EventEmitter<Symbol | undefined | null | void>();
     // readonly onDidChangeTreeData: Event<Symbol | undefined | null | void> = this._onDidChangeTreeData.event;
 
@@ -25,6 +25,6 @@ export class ProceduresProvider implements TreeDataProvider<Procedure> {
     getChildren(element?: Procedure): ProviderResult<Procedure[]> {
         if (element) return [];
         
-        return HopperClient.shared.listProcedures();
+        return this.client?.listProcedures() || [];
     }
 }

@@ -7,13 +7,11 @@
 //
 
 import * as vscode from 'vscode';
-import { TreeItem, TreeDataProvider, ProviderResult, Event, EventEmitter } from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
+import { TreeItem, ProviderResult } from 'vscode';
 import { String } from '../api/model';
-import HopperClient from '../api/hopper';
+import BaseProvider from './base-provider';
 
-export class StringsProvider implements TreeDataProvider<String> {
+export class StringsProvider extends BaseProvider<String> {
     // private _onDidChangeTreeData: EventEmitter<Symbol | undefined | null | void> = new EventEmitter<Symbol | undefined | null | void>();
     // readonly onDidChangeTreeData: Event<Symbol | undefined | null | void> = this._onDidChangeTreeData.event;
 
@@ -28,6 +26,6 @@ export class StringsProvider implements TreeDataProvider<String> {
     getChildren(element?: String): ProviderResult<String[]> {
         if (element) return [];
         
-        return HopperClient.shared.listStrings();
+        return this.client?.listStrings() || [];
     }
 }
