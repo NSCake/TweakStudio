@@ -51,18 +51,30 @@ class ListProcedures:
     PATH = "/procedures"
 
     @classmethod
-    def run(cls):
+    def run(cls, segment_name):
+        if not segment_name:
+            allProcs = map(cls.procsForSegment, ListSegments.run())
+            return sum(allProcs, [])
+        else:
+            return cls.procsForSegment(segment_name)
+
+    @classmethod
+    def procsForSegment(cls, segment_name):
+        if not segment_name:
+            raise Exception("did not specify a segment name")
+
+        segment = Document.getCurrentDocument().getSegmentByName(segment_name)
 
         named_procedures = []
-        for segment_name in ListSegments.run():
-            segment = Document.getCurrentDocument().getSegmentByName(segment_name)
-            for label_address in segment.getNamedAddresses():
-                named_procedures.append(
-                    {
-                        "label": segment.getDemangledNameAtAddress(label_address),
-                        "address": label_address,
-                    }
-                )
+        for i in range(segment.getProcedureCount()):
+            proc = segment.getProcedureAtIndex(i)
+            named_procedures.append(
+                {
+                    "label": proc.signatureString(),
+                    "address": proc.getBasicBlock(0).getStartingAddress(),
+                    "segment": segment_name,
+                }
+            )
 
         return named_procedures
 
