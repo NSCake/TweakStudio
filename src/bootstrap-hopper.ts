@@ -6,9 +6,8 @@
 //  Copyright © 2021 Tanner Bennett. All rights reserved.
 //
 
-import * as VSCode from 'vscode';
-import { exec } from 'child_process';
-import { createServer } from 'http';
+import { spawn, exec } from 'child_process';
+import * as Express from 'express';
 
 export default class HopperBootstrap {
     static extensionPath: string = "";
@@ -65,16 +64,19 @@ export default class HopperBootstrap {
         return new Promise((resolve, reject) => {
             // Start the callback server before we launch Hopper
             const clientPort = this.serveNewClient(path);
+            
             // Await the new client's ping so we can assign it a port
             clientPort.then(p => resolve(p));
             clientPort.catch(e => reject(e));
             
-            // Get the port we're listening on
-            const port = this.callbackPortForPath(path);
+            // Get the port we're listening on and setup env vars
+            const port = this.callbackPortForPath(path).toString();
+            const env = Object.create(process.env);
+            env.NODE_ENV = port;
             
             // Start Hopper, wait for callback
             const command = this.binaryCommand('FAT', '--aarch64', path);
-            exec(command, (error, stdout, stderr) => {
+            exec(command, { env: env }, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
                 }
@@ -97,32 +99,33 @@ export default class HopperBootstrap {
         const callbackPort = this.portMap[tempServerID] = this.randomPort();
         
         return new Promise((resolve, reject) => {
-            const server = createServer();
+            const tempApp = Express();
+            
+            // Listen for new clients on callbackPort
+            const server = tempApp.listen(callbackPort, () => {
+                console.log(`Listening for Hopper callback on port ${callbackPort}`);
+                server.close();
+            });
 
             // Start a server hosting an endpoint at the port we pass to the client
-            server.on('request', (request, response) => {
-                // TODO: check request endpoint, should be `tweakstudio/hopper`
-                response.end();
-                
-                // Reserve client port, fufill port promise
-                this.portMap[path] = 5; // TODO: read port
-                resolve(5);
-                
-                // Stop the server
-                server.close((error) => {
-                    // Log any error
-                    if (error) {
-                        console.log(error);
-                    }
+            tempApp.post('tweakstudio/hopper', (request, response) => {
+                if (request.body.port) {
+                    // Reserve client port, fufill promise
+                    this.portMap[path] = request.body.port;
+                    resolve(request.body.port);
                     
                     // Release temporary server port
                     delete this.portMap[tempServerID];
-                });
-            });
-
-            // Listen for new clients on callbackPort
-            server.listen(callbackPort, () => {
-                console.log(`Listening for Hopper callback on port ${callbackPort}`);
+                    
+                    // Stop the server
+                    server.close();
+                    
+                    response.status(200);
+                } else {
+                    // Missing port
+                    reject("Prox callback was missing port");                    
+                    response.status(400);
+                }
             });
         });
     }
