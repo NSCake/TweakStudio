@@ -19,14 +19,14 @@
         "viewsContainers": {
             "activitybar": [
                 {
-                    "id": "disamProxyPanel",
-                    "title": "Disassembler Proxy",
+                    "id": "tweakstudio",
+                    "title": "Tweak Studio",
                     "icon": "media/dep.svg"
                 }
             ]
         },
         "views": {
-            "disamProxyPanel": [
+            "tweakstudio": [
                 {
                     "id": "segments",
                     "name": "Segments"
