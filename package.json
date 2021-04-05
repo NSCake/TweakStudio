@@ -11,7 +11,8 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello",
+        "onCommand:hopper.open",
+        "onCommand:hopper.open-test",
         "onView:procs"
     ],
     "main": "./out/src/extension",
@@ -47,8 +48,12 @@
         },
         "commands": [
             {
-                "command": "extension.sayHello",
-                "title": "Hello World"
+                "command": "hopper.open",
+                "title": "Open Binary or Document in Hopper"
+            },
+            {
+                "command": "hopper.open-test",
+                "title": "Open dummy binary"
             }
         ]
     },

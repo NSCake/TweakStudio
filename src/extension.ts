@@ -21,9 +21,21 @@ export function activate(context: vscode.ExtensionContext) {
 	
 	DocumentManager.shared.registerViews();
 	DocumentManager.shared.registerDocumentProviders(context);
+	
+	// Register commands //
+	
+	// Open something in Hopper
+	context.subscriptions.push(vscode.commands.registerCommand('hopper.open', async () => {
+		DocumentManager.shared.promptToStartNewClient();
+	}));
+	
+	// For debugging, quickly open a dummy binary
+	context.subscriptions.push(vscode.commands.registerCommand('hopper.open-test', async () => {
+		DocumentManager.shared.startNewClient(`${context.extensionPath}/test/FLEXing`);
+	}));
 
-	// Register a command that opens a Hopper document
-	context.subscriptions.push(vscode.commands.registerCommand('hopper.open', async (path: string) => {
+	// Register a command that opens a pseudocode document
+	context.subscriptions.push(vscode.commands.registerCommand('hopper.view-pseudocode', async (path: string) => {
         const uri = vscode.Uri.parse('hopper:' + path);
         const doc = await vscode.workspace.openTextDocument(uri);
         await vscode.window.showTextDocument(doc, { preview: false });
