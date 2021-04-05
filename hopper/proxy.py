@@ -191,12 +191,12 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
 
-    # Create server with first available port
-    httpd = HTTPServer(("", 0), RequestHandler)
+    # Create server with predefined port
+    port = 53963
+    httpd = HTTPServer(("", port), RequestHandler)
     
     # Notify extension of our port
-    port = 0 # TODO: how do you get the port from httpd?
-    host = 'localhost' + os.environ["SERVER_PORT"]
+    host = 'localhost' + os.environ["EXT_PORT"]
     connection = http.client.HTTPSConnection(host)
     headers = {'Content-type': 'application/json'}
     body = json.dumps({'port': port})
