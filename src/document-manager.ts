@@ -7,7 +7,10 @@
 //
 
 import * as VSCode from 'vscode';
+import { window } from 'vscode';
 import APIClient from './api/client';
+import HopperClient from './api/hopper';
+import HopperBootstrap from './bootstrap-hopper';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
 import { ProceduresProvider } from './views/procs';
@@ -44,11 +47,39 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     
     // Private //
     
-    private promptToStartNewClient() {
-        
+    async promptToStartNewClient() {
+        // Show file picker
+        const selection = await VSCode.window.showOpenDialog({ 'canSelectMany': false });
+        if (selection) {
+            await this.startNewClient(selection[0].path);
+		}
     }
     
-    private activateClient(client: APIClient) {
+    async startNewClient(path: string) {
+        try {
+            // Activate our view
+            VSCode.commands.executeCommand('workbench.view.extension.tweakstudio');
+
+            // Bootstrap selected file in Hopper
+            const port = await HopperBootstrap.openFile(path);
+            const client = new HopperClient(port);
+            this.addClient(client, true);
+        } catch (error) {
+            window.showErrorMessage(error);
+        }
+    }
+    
+    addClient(client: APIClient, activate: boolean) {
+        this.clients.push(client);
+        
+        if (activate) {
+            this.switchToClient(client);            
+        }
+    }
+    
+    switchToClient(client: APIClient) {
+        this.activeClient = client;
+
         for (const provider of this.allProviders) {
             provider.client = client;
         }
