@@ -8,12 +8,9 @@
 
 import json
 import subprocess
-import typing
 import logging
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
-
-if typing.TYPE_CHECKING:
-    from hopper_api import Document
 
 
 class TerminateHopper:
