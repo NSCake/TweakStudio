@@ -11,13 +11,17 @@ import * as Express from 'express';
 
 export default class HopperBootstrap {
     static extensionPath: string = "";
-    static hopperPath: string = "hopper";
+    private static hopperPath: string = "hopper";
+    
+    static setHopperPath(path: string) {
+        this.hopperPath = `${path}/Contents/MacOS/hopper`;
+    }
     
     private static get proxyScript(): string {
         return `${this.extensionPath}/hopper/proxy.py`;
     }
     
-    private static get testBinary(): string {
+    static get testBinary(): string {
         return `${this.extensionPath}/test/FLEXing`;
     }
     

@@ -35,9 +35,9 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     }
     
     registerViews() {
-        // vscode.window.registerTreeDataProvider('hooks', this.hooksProvider);
-        VSCode.window.registerTreeDataProvider('procs', this.procsProvider);
-        VSCode.window.registerTreeDataProvider('strings', this.stringsProvider);
+        // window.registerTreeDataProvider('hooks', this.hooksProvider);
+        window.registerTreeDataProvider('procs', this.procsProvider);
+        window.registerTreeDataProvider('strings', this.stringsProvider);
     }
     
     registerDocumentProviders(context: VSCode.ExtensionContext) {

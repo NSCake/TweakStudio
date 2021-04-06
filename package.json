@@ -55,6 +55,27 @@
                 "command": "hopper.open-test",
                 "title": "Open dummy binary"
             }
+        ],
+        "configuration": [
+            {
+                "title": "Tweak Studio",
+                "properties": {
+                    "tweakstudio.hopper.path": {
+                        "type": "string",
+                        "default": "/Applications/Hopper Disassembler.app",
+                        "description": "The path to your copy of Hopper",
+                        "pattern": "^/.+\\.app$",
+                        "patternErrorMessage": "Must be a full path to an app without a trailing /"
+                    },
+                    "tweakstudio.ida.path": {
+                        "type": "string",
+                        "default": "/Applications/IDA Pro/ida.app",
+                        "description": "The path to your copy of ida.app (not ida64.app)",
+                        "pattern": "^/.+\\.app$",
+                        "patternErrorMessage": "Must be a full path to an app without a trailing /"
+                    }
+                }
+            }
         ]
     },
     "scripts": {
