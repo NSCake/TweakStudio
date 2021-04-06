@@ -6,15 +6,22 @@
 //  Copyright © 2021 Tanner Bennett. All rights reserved.
 //
 
+import { window } from 'vscode';
 import { spawn, exec } from 'child_process';
 import * as Express from 'express';
+import * as fs from 'fs';
 
 export default class HopperBootstrap {
     static extensionPath: string = "";
-    private static hopperPath: string = "hopper";
+    private static hopperPath: string | undefined;
     
-    static setHopperPath(path: string) {
-        this.hopperPath = `${path}/Contents/MacOS/hopper`;
+    static async setHopperPath(path: string) {
+        try {
+            await fs.promises.access(path);
+            this.hopperPath = `${path}/Contents/MacOS/hopper`;
+        } catch (error) {
+            console.log(`Hopper instance not found at '${path}'`);
+        }
     }
     
     private static get proxyScript(): string {
@@ -56,7 +63,8 @@ export default class HopperBootstrap {
     }
     
     private static binaryCommand(format: string, arch: string, binary: string): string {
-        return `${this.hopperPath} -l ${format} ${arch} -Y '${this.proxyScript}' -e '${binary}'`;
+        // Make sure you check this.hopperPath before calling me
+        return `${this.hopperPath!} -l ${format} ${arch} -Y '${this.proxyScript}' -e '${binary}'`;
     }
     
     /**
@@ -66,6 +74,12 @@ export default class HopperBootstrap {
      */
     static async openFile(path: string): Promise<number> {
         return new Promise((resolve, reject) => {
+            // Do we have a valid copy of Hopper?
+            if (!this.hopperPath) {
+                reject('Hopper not found; ensure Hopper path setting is valid');
+                return;
+            }
+            
             // Start the callback server before we launch Hopper
             const clientPort = this.serveNewClient(path);
             
