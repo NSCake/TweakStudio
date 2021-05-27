@@ -1,5 +1,5 @@
 //
-//  bootstrap-hopper.ts
+//  bootstrap/hopper.ts
 //  Tweak Studio
 //  
 //  Created by Tanner Bennett on 2021-04-01

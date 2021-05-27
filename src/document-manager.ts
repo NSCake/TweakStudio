@@ -10,7 +10,7 @@ import * as VSCode from 'vscode';
 import { window } from 'vscode';
 import APIClient from './api/client';
 import HopperClient from './api/hopper';
-import HopperBootstrap from './bootstrap-hopper';
+import HopperBootstrap from './bootstrap/hopper';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
 import { ProceduresProvider } from './views/procs';

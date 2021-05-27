@@ -12,7 +12,7 @@
 import * as vscode from 'vscode';
 import { window, workspace, commands, Uri } from 'vscode';
 import HopperClient from './api/hopper';
-import HopperBootstrap from './bootstrap-hopper';
+import HopperBootstrap from './bootstrap/hopper';
 import DocumentManager from './document-manager';
 
 function reloadSettings() {
