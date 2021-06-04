@@ -1,5 +1,5 @@
 //
-//  procs.ts
+//  hooks.ts
 //  Tweak Studio
 //  
 //  Created by Tanner Bennett on 2021-03-06
