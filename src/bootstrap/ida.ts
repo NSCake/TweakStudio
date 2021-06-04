@@ -1,5 +1,5 @@
 //
-//  bootstrap/hopper.ts
+//  bootstrap/ida.ts
 //  Tweak Studio
 //  
 //  Created by Tanner Bennett on 2021-04-01
@@ -11,21 +11,27 @@ import { spawn, exec } from 'child_process';
 import * as Express from 'express';
 import * as fs from 'fs';
 
-export default class HopperBootstrap {
-    static extensionPath: string = "";
-    private static hopperPath: string | undefined;
+interface IDAFlags {
+    overwrite?: boolean, // Defaults to NO
+    slice?: number, // undefined if not FAT
     
-    static async setHopperPath(path: string) {
+}
+
+export default class IdaBootstrap {
+    static extensionPath: string = "";
+    private static idaPath: string | undefined;
+    
+    static async setIDAPath(path: string) {
         try {
             await fs.promises.access(path);
-            this.hopperPath = `${path}/Contents/MacOS/hopper`;
+            this.idaPath = `${path}/Contents/MacOS/ida64`;
         } catch (error) {
-            window.showErrorMessage(`Hopper instance not found at '${path}'`);
+            window.showErrorMessage(`IDA instance not found at '${path}'`);
         }
     }
     
     private static get proxyScript(): string {
-        return `${this.extensionPath}/hopper/proxy.py`;
+        return `${this.extensionPath}/ida/proxy.py`;
     }
     
     static get testBinary(): string {
@@ -62,25 +68,42 @@ export default class HopperBootstrap {
         return this.portMap[this.serverIDForPath(path)];
     }
     
-    private static binaryCommand(format: string, arch: string, binary: string): string {
-        // Make sure you check this.hopperPath before calling me
-        return `${this.hopperPath!} -l ${format} ${arch} -Y '${this.proxyScript}' -e '${binary}'`;
+    private static async commandToOpenFile(path: string): Promise<string> {
+        if (path.endsWith('.i64')) {
+            return this.openDatabaseCommand(path);
+        }
+        
+        return this.openBinaryCommand(path, { overwrite: true, slice: 3 }); // TODO: choose slice with otool
+    }
+    
+    private static openDatabaseCommand(db: string): string {
+        
+        // Make sure you check this.idaPath before calling me
+        return `"${this.idaPath!}" -S"${this.proxyScript}" -A "${db}"`;
+    }
+    
+    private static openBinaryCommand(binary: string, flags: IDAFlags): string {
+        const fatSlice = flags.slice !== undefined ? `"-TFat Mach-O File, ${flags.slice!}"` : '';
+        const replace = flags.overwrite ? '-c' : '';
+        
+        // Make sure you check this.idaPath before calling me
+        return `"${this.idaPath!}" ${replace} ${fatSlice} -S"${this.proxyScript}" -A "${binary}"`;
     }
     
     /**
-     * Start a new Hopper instance with the given path.
+     * Start a new IDA instance with the given path.
      * @param path A path to a .hop document or an executable file.
-     * @return The port associated with the new Hopper instance to pull data from.
+     * @return The port associated with the new IDA instance to pull data from.
      */
     static async openFile(path: string): Promise<number> {
-        return new Promise((resolve, reject) => {
-            // Do we have a valid copy of Hopper?
-            if (!this.hopperPath) {
-                reject('Hopper not found; ensure Hopper path setting is valid');
+        return new Promise(async (resolve, reject) => {
+            // Do we have a valid copy of IDA?
+            if (!this.idaPath) {
+                reject('IDA not found; ensure IDA path setting is valid');
                 return;
             }
             
-            // Start the callback server before we launch Hopper
+            // Start the callback server before we launch IDA
             const clientPort = this.serveNewClient(path);
             
             // Await the new client's ping so we can assign it a port
@@ -90,10 +113,11 @@ export default class HopperBootstrap {
             // Get the port we're listening on and setup env vars
             const port = this.callbackPortForPath(path).toString();
             const env = Object.create(process.env);
-            env.NODE_ENV = port;
+            env.EXT_PORT = port;
             
-            // Start Hopper, wait for callback
-            const command = this.binaryCommand('FAT', '--aarch64', path);
+            // Start IDA, wait for callback
+            const command = await this.commandToOpenFile(path);
+            window.showInformationMessage(command);
             exec(command, { env: env }, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
@@ -109,7 +133,7 @@ export default class HopperBootstrap {
      * to call back and let us know when it's ready to receive commands.
      * 
      * @param path A path to a .hop document or an executable file.
-     * @return The port associated with the new Hopper instance.
+     * @return The port associated with the new IDA instance.
      */
     static async serveNewClient(path: string): Promise<number> {
         // Create and reserve temporary server port
@@ -118,15 +142,15 @@ export default class HopperBootstrap {
         
         return new Promise((resolve, reject) => {
             const tempApp = Express();
+            tempApp.use(Express.json());
             
             // Listen for new clients on callbackPort
             const server = tempApp.listen(callbackPort, () => {
-                console.log(`Listening for Hopper callback on port ${callbackPort}`);
-                server.close();
+                console.log(`Listening for IDA callback on port ${callbackPort}`);
             });
 
             // Start a server hosting an endpoint at the port we pass to the client
-            tempApp.post('tweakstudio/hopper', (request, response) => {
+            tempApp.post('/tweakstudio/ida', (request, response) => {
                 if (request.body.port) {
                     // Reserve client port, fufill promise
                     this.portMap[path] = request.body.port;
@@ -135,10 +159,11 @@ export default class HopperBootstrap {
                     // Release temporary server port
                     delete this.portMap[tempServerID];
                     
+                    response.status(200);
+                    
                     // Stop the server
                     server.close();
-                    
-                    response.status(200);
+                    console.log(`Got response with port ${request.body.port}`);
                 } else {
                     // Missing port
                     reject("Prox callback was missing port");                    

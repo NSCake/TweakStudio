@@ -13,7 +13,9 @@ enum Endpoint {
     listProcedures = "/procedures",
     listStrings = "/strings",
     
-    decompile = "/decompile"
+    decompile = "/decompile",
+    
+    shutdown = "/shutdown",
 }
 
 export default Endpoint;

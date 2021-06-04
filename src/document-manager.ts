@@ -10,6 +10,7 @@ import * as VSCode from 'vscode';
 import { window } from 'vscode';
 import APIClient from './api/client';
 import HopperClient from './api/hopper';
+import DisassemblerBootstrap from './bootstrap/bootstrap';
 import HopperBootstrap from './bootstrap/hopper';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
@@ -17,6 +18,12 @@ import { ProceduresProvider } from './views/procs';
 import { StringsProvider } from './views/strings';
 
 type AnyProvider = BaseProvider<any>;
+
+export interface DisassemblerFamily {
+    scheme: string;
+    client: typeof APIClient;
+    bootstrap: DisassemblerBootstrap;
+}
 
 export default class DocumentManager implements VSCode.TextDocumentContentProvider {
     static shared = new DocumentManager();
@@ -41,31 +48,32 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     }
     
     registerDocumentProviders(context: VSCode.ExtensionContext) {
-        // Register a content provider for the hopper scheme
+        // Register a content provider for the two schemes
         context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('hopper', this));
+        context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('ida', this));
     }
     
     // Private //
     
-    async promptToStartNewClient() {
+    async promptToStartNewClient(family: DisassemblerFamily) {
         // Show file picker
         const selection = await VSCode.window.showOpenDialog({ 'canSelectMany': false });
         if (selection) {
-            await this.startNewClient(selection[0].path);
+            await this.startNewClient(selection[0].path, family);
 		}
     }
     
-    async startNewClient(path: string) {
+    async startNewClient(path: string, family: DisassemblerFamily) {
         try {
             // Activate our view
             VSCode.commands.executeCommand('workbench.view.extension.tweakstudio');
 
             // Bootstrap selected file in Hopper
-            const port = await HopperBootstrap.openFile(path);
-            const client = new HopperClient(port);
+            const port = await family.bootstrap.openFile(path);
+            const client = new family.client(family.scheme, port);
             this.addClient(client, true);
         } catch (error) {
-            window.showErrorMessage(error);
+            window.showErrorMessage(error.message);
         }
     }
     
@@ -85,6 +93,16 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         }
     }
     
+    clientWithID(id: string): APIClient | undefined {
+        return this.clients.filter(c => c.id == id)[0];
+    }
+    
+    shutdown() {
+        this.clients.forEach(c => c.shutdown());
+        this.activeClient = undefined;
+        this.clients = [];
+    }
+    
     // TextDocumentContentProvider //
     
     // Emitter and its event
@@ -93,8 +111,9 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
 
     provideTextDocumentContent(uri: VSCode.Uri): VSCode.ProviderResult<string> {
         const parts = uri.path.split('/');
-        const segment = parts[0];
+        // const segment = parts[0];
         const address = parseInt(parts[1]);
-        return this.activeClient?.decompileProcedure(/* segment, */ address);
+        const id = uri.query;
+        return this.clientWithID(id)?.decompileProcedure(/* segment, */ address);
     }
 }

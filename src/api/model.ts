@@ -27,10 +27,10 @@ export class Symbol extends vscode.TreeItem {
 export type String = Symbol;
 
 export class Procedure extends Symbol {
-    constructor(label: string, address: number, segment: string) {
+    constructor(scheme: string, label: string, address: number, segment: string) {
         super(label, address, segment);
         this.command = {
-            command: 'hopper.open',
+            command: `${scheme}.view-pseudocode`,
             title: '',
             arguments: [this.path]
         }

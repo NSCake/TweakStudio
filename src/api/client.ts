@@ -10,22 +10,35 @@ import * as fetch from "node-fetch";
 import Endpoint from "./endpoints";
 import { hostname } from "os";
 import { Symbol, Segment, Procedure, String } from "./model";
+import { window } from "vscode";
 
 type SymbolData = { label: string, address: number, segment: string };
-type ProxyResponse<T> = {
-    data: T,
-    error: string,
-}
+type ProxyResponse<T> = { data: T }
+type ProxyErrorResponse = { data: null, error: string };
 
 function isError(obj: any): obj is Error {
     return false;
 }
 
-class APIClient {
-    protected baseURL: string
+function isErrorResponse(obj: any): obj is ProxyErrorResponse {
+    return obj.error !== undefined && obj.data === null;
+}
 
-    constructor(port: number) {
-        this.baseURL = `http://localhost:${port}`;
+class APIClient {
+    protected port: number;
+    protected baseURL: string;
+    /** `ida` or `hopper` */
+    protected scheme: string;
+
+    constructor(scheme: string, port: number) {
+        this.port = port;
+        this.scheme = scheme;
+        // this.baseURL = `http://localhost:${port}`;
+        this.baseURL = `http://localhost.charlesproxy.com:${port}`;
+    }
+
+    get id(): string {
+        return this.port.toString();
     }
 
     // Private //
@@ -39,7 +52,7 @@ class APIClient {
     // }
     
     protected decodeProcedures: (symbols: SymbolData[]) => Procedure[] = (items) => {
-        return items.map(s => this.decode(Procedure, [s.label, s.address, s.segment]));
+        return items.map(s => this.decode(Procedure, [this.scheme, s.label, s.address, s.segment]));
     }
     
     protected decodeSymbols: (symbols: SymbolData[]) => Symbol[] = (items) => {
@@ -50,6 +63,7 @@ class APIClient {
         return items.map(s => this.decode(Segment, [s]));
     }
 
+    /** Sends a request with appropriate headers, JSON body, and handles all errors, even in the response. */
     protected sendRequest<T>(method: string, endpoint: string, params: object): Promise<T> {        
         return fetch(this.baseURL + endpoint, {
             method: method,
@@ -64,7 +78,11 @@ class APIClient {
         })
         .then(json => {
             if (isError(json)) {
+                window.showErrorMessage(json.message);
                 throw json;
+            } else if (isErrorResponse(json)) {
+                window.showErrorMessage(json.error);
+                throw json.error;
             } else {
                 return json;
             }
@@ -76,13 +94,7 @@ class APIClient {
     }
 
     protected post<T>(endpoint: string, bodyParams: object = {}): Promise<T> {
-        return this.sendRequest('POST', endpoint, bodyParams).then((response: ProxyResponse<T>) => {
-            if (response.error) {
-                throw response.error;
-            }
-            
-            return response.data;
-        });
+        return this.sendRequest('POST', endpoint, bodyParams).then((r: ProxyResponse<T>) => r.data);
     }
 
     protected parseIntsToStrings<T>(obj: any): T {
@@ -111,8 +123,8 @@ class APIClient {
         return this.post(Endpoint.listProcedures, { segment_name: segment }).then(this.decodeProcedures);
     }
     
-    listStrings(segment: string = ""): Promise<String[]> {
-        return this.post(Endpoint.listStrings, { segment_name: segment }).then(this.decodeSymbols);
+    listStrings(): Promise<String[]> {
+        return this.post(Endpoint.listStrings).then(this.decodeSymbols);
     }
     
     // Decompile //
@@ -129,7 +141,11 @@ class APIClient {
     //     });
     // }
     
+    // Shutdown //
     
+    shutdown(saveOrNot: boolean = false): Promise<void> {
+        return this.post(Endpoint.shutdown, { save: saveOrNot });
+    }
 }
 
 export default APIClient;

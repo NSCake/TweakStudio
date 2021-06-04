@@ -13,6 +13,8 @@
     "activationEvents": [
         "onCommand:hopper.open",
         "onCommand:hopper.open-test",
+        "onCommand:ida.open",
+        "onCommand:ida.open-test",
         "onView:procs"
     ],
     "main": "./out/src/extension",
@@ -53,7 +55,15 @@
             },
             {
                 "command": "hopper.open-test",
-                "title": "Open dummy binary"
+                "title": "Open dummy binary in Hopper"
+            },
+            {
+                "command": "ida.open",
+                "title": "Open Binary or Database in IDA"
+            },
+            {
+                "command": "ida.open-test",
+                "title": "Open dummy binary in IDA"
             }
         ],
         "configuration": [
