@@ -24,14 +24,34 @@ export class Symbol extends vscode.TreeItem {
     }
 }
 
+export class Xref extends vscode.TreeItem {
+    constructor(
+        readonly label: string,
+        readonly address: number,
+    ) {
+        super(label);
+    }
+}
+
 export type String = Symbol;
+
+export class Selector extends Symbol {
+    constructor(scheme: string, label: string, address: number, segment: string) {
+        super(label, address, segment);
+        this.command = {
+            command: `${scheme}.show-selrefs`,
+            title: 'Show selector refs',
+            arguments: [this.address]
+        }
+    }
+}
 
 export class Procedure extends Symbol {
     constructor(scheme: string, label: string, address: number, segment: string) {
         super(label, address, segment);
         this.command = {
             command: `${scheme}.view-pseudocode`,
-            title: '',
+            title: 'View pseudocode',
             arguments: [this.path]
         }
     }

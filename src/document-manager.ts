@@ -15,6 +15,7 @@ import HopperBootstrap from './bootstrap/hopper';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
 import { ProceduresProvider } from './views/procs';
+import { SelectorsProvider } from './views/selectors';
 import { StringsProvider } from './views/strings';
 
 type AnyProvider = BaseProvider<any>;
@@ -33,17 +34,19 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     
     // hooksProvider = new HooksProvider();
     procsProvider = new ProceduresProvider();
+    selectorsProvider = new SelectorsProvider();
     stringsProvider = new StringsProvider();
     
     private get allProviders(): AnyProvider[] {
         return [
-            /* this.hooksProvider, */ this.procsProvider, this.stringsProvider
+            /* this.hooksProvider, */ this.procsProvider, this.selectorsProvider, this.stringsProvider
         ];
     }
     
     registerViews() {
         // window.registerTreeDataProvider('hooks', this.hooksProvider);
         window.registerTreeDataProvider('procs', this.procsProvider);
+        window.registerTreeDataProvider('selectors', this.selectorsProvider);
         window.registerTreeDataProvider('strings', this.stringsProvider);
     }
     

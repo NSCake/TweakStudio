@@ -39,6 +39,10 @@
                     "name": "Procedures"
                 },
                 {
+                    "id": "selectors",
+                    "name": "Objc Selectors"
+                },
+                {
                     "id": "strings",
                     "name": "Strings"
                 },
