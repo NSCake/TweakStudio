@@ -8,7 +8,6 @@
 #
 
 import json
-import subprocess
 import traceback
 import http.client
 import os
@@ -18,6 +17,9 @@ from idautils import *
 from idaapi import *
 from idc import *
 import sark
+
+import itertools
+import types
 
 load_plugin('hexx64')
 load_plugin('hexarm64')
@@ -86,7 +88,7 @@ class ListProcedures:
         for function in segment.functions:
             named_procedures.append(
                 {
-                    "label": function.signature or function.name,
+                    "label": function.demangled,
                     "address": function.startEA,
                     "segment": segment_name,
                 }
@@ -193,7 +195,6 @@ class RequestHandler(BaseHTTPRequestHandler):
             if self.path == handler.PATH:
                 try:
                     data_response = handler.run(**posted_data)
-                    json.dumps(data_response)
                     self.send_response(200)
                 except TypeError as e:
                     self.send_response(500)
@@ -208,7 +209,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
-                self.wfile.write(json.dumps(response).encode("utf-8"))
+                self.wfile.write(json.dumps(response, default=lambda o: '').encode("utf-8"))
                 
                 if wantsShutdown:
                     server.shutdown()
