@@ -45,6 +45,56 @@ autoWait()
 # __bss
 # UNDEF
 
+jsonTypes = [str, int, float, bool, long]
+collections = [dict, list, itertools.imap, types.GeneratorType]
+nonListLists = [itertools.imap, types.GeneratorType]
+excluded = [ida_funcs.func_t]
+
+def safe_getattr(obj, key):
+    try:
+        return getattr(obj, key)
+    except:
+        return None
+
+def reflect(obj):
+    if obj is None:
+        return None
+    
+    # if isinstance(obj, Generator)
+        
+    cls = type(obj)
+    
+    if cls in jsonTypes:
+        return obj
+    
+    if cls in collections:
+        if isinstance(obj, list):
+            return [reflect(e) for e in obj]
+        # elif cls in nonListLists:
+        #     return [reflect(e) for e in list(obj)]
+        elif isinstance(obj, dict):
+            return { k: reflect(v) for k, v in obj.items() }
+        else:
+            return 'collection?'
+        
+    keys = [p for p in dir(cls) if isinstance(getattr(cls,p), property)]
+    values = [reflect(safe_getattr(obj, key)) for key in keys]
+    props = {}
+    for pair in zip(keys, values):
+        props[pair[0]] = pair[1]
+    
+    return props if props != {} else str(cls)
+
+def segment_containsLine(self, line):
+    return (line.startEA >= self.startEA) and (line.startEA < self.endEA)
+
+def function_containsAddress(self, addr):
+    return (addr >= self.startEA) and (addr < self.endEA)
+
+sark.Segment.containsLine = segment_containsLine
+sark.Function.containsAddress = function_containsAddress    
+    
+
 server = 0
 wantsShutdown = False
 
@@ -91,6 +141,7 @@ class ListProcedures:
                     "label": function.demangled,
                     "address": function.startEA,
                     "segment": segment_name,
+                    # "obj": reflect(function)
                 }
             )
 
@@ -101,34 +152,75 @@ class ListStrings:
     PATH = "/strings"
 
     @classmethod
-    def run(cls):
-        seg = sark.Segment(name="__cstring")
-        
+    def run(cls, segment_names):
         strings = []
-        for line in seg.lines:
-            if line.is_string:
-                strings.append(
-                    {
-                        "label": line.name or line.bytes,
-                        "address": line.startEA,
-                        "segment": "__cstring",
-                    }
-                )
+        for sname in segment_names:
+            seg = sark.Segment(name=str(sname)) # sname is type 'unicode' here???
         
-        seg = sark.Segment(name="__cfstring")
-        
-        for line in seg.lines:
-            if line.is_string:
-                strings.append(
-                    {
-                        "label": line.name or line.bytes,
-                        "address": line.startEA,
-                        "segment": "__cfstring",
-                    }
-                )
+            for line in seg.lines:
+                if line.is_string:
+                    strings.append(
+                        {
+                            "label": line.bytes,
+                            "address": line.startEA,
+                            "segment": sname,
+                        }
+                    )
                 
         return strings
 
+
+class ListSelectorXRefs:
+    PATH = "/sel_xrefs"
+    
+    @classmethod
+    def run(cls, string_address):
+        selrefs = sark.Segment(name='__objc_selrefs')
+        allfuncs = sark.Segment(name='__text').functions
+        
+        # Get the line for this selector
+        line = sark.Line(ea=string_address)
+        if not line:
+            return []
+        
+        # Enumerate all references to this selector
+        for xr in line.xrefs_to:
+            sel = sark.Line(ea=xr.frm)
+            # ... until we find the (first) selref pointing to this selector
+            if sel and selrefs.containsLine(sel):
+                # Then, list all references to that selref
+                refs = [ref for ref in sel.drefs_to]
+                results = []
+                # Loop over each selref ref
+                for ref in refs:
+                    # ... and find its matching function
+                    for func in allfuncs:
+                        if func.containsAddress(ref):
+                            # Attempt to convert ref to a line of decompiled code
+                            code = '?'
+                            cfunc = decompile(func.startEA) # type: cfuncptr_t
+                            lines = cfunc.treeitems # type: ctree_items_t
+                            # Check each line of the pseudocode for a matching address
+                            for item in lines:
+                                item = item # type: citem_t
+                                if item.ea >= ref:
+                                    code = item.cexpr.string if item.is_expr() else 'not expr'
+                                    break
+                            else:
+                                code = 'no lines'
+                            
+                            results.append(
+                                {
+                                    "label": func.demangled + ': ' + code,
+                                    "address": ref
+                                }
+                            )
+                
+                return results
+        
+        # Probably not a selector, or has no references
+        return []
+                    
 
 class DecompileProcedure:
     PATH = "/decompile"
@@ -141,13 +233,11 @@ class DecompileProcedure:
         if not procedure_address:
             raise Exception("did not specify procedure address")
 
-        proc_name = idc.get_func_name(procedure_address)
-        procedure_candidate = sark.Function(ea=procedure_address)
-        
+        procedure_candidate = sark.Function(ea=procedure_address)        
         if procedure_candidate:
             lines = []
-            cfunc = decompile(procedure_address)
-            pscode = cfuncptr_t.get_pseudocode(cfunc)
+            cfunc = decompile(procedure_address) # type: cfuncptr_t
+            pscode = cfunc.get_pseudocode()
             for line in pscode:
                 lines.append(tag_remove(line.line))
                 
@@ -191,6 +281,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             DecompileProcedure,
             ListStrings,
             DisassembleProcedure,
+            ListSelectorXRefs,
         ]:
             if self.path == handler.PATH:
                 try:
