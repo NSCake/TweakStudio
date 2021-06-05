@@ -9,10 +9,10 @@
 import * as fetch from "node-fetch";
 import Endpoint from "./endpoints";
 import { hostname } from "os";
-import { Symbol, Segment, Procedure, String } from "./model";
+import { Symbol, Segment, Procedure, String, Selector, Xref } from "./model";
 import { window } from "vscode";
 
-type SymbolData = { label: string, address: number, segment: string };
+type LabelData = { label: string, address: number, segment?: string };
 type ProxyResponse<T> = { data: T }
 type ProxyErrorResponse = { data: null, error: string };
 
@@ -51,12 +51,20 @@ class APIClient {
     //     return items.map(s => this.decode(type, args));
     // }
     
-    protected decodeProcedures: (symbols: SymbolData[]) => Procedure[] = (items) => {
+    protected decodeProcedures: (symbols: LabelData[]) => Procedure[] = (items) => {
         return items.map(s => this.decode(Procedure, [this.scheme, s.label, s.address, s.segment]));
     }
     
-    protected decodeSymbols: (symbols: SymbolData[]) => Symbol[] = (items) => {
+    protected decodeSymbols: (symbols: LabelData[]) => Symbol[] = (items) => {
         return items.map(s => this.decode(Symbol, [s.label, s.address, s.segment]));
+    }
+    
+    protected decodeSelectors: (symbols: LabelData[]) => Symbol[] = (items) => {
+        return items.map(s => this.decode(Selector, [this.scheme, s.label, s.address, s.segment]));
+    }
+    
+    protected decodeXrefs: (symbols: LabelData[]) => Xref[] = (items) => {
+        return items.map(s => this.decode(Xref, [s.label, s.address]));
     }
     
     protected decodeSegments: (names: string[]) => Segment[] = (items) => {
@@ -124,7 +132,21 @@ class APIClient {
     }
     
     listStrings(): Promise<String[]> {
-        return this.post(Endpoint.listStrings).then(this.decodeSymbols);
+        return this.post(Endpoint.listStrings, {
+            segment_names: ['__cstring', '__cfstring']
+        }).then(this.decodeSymbols);
+    }
+    
+    listSelectors(): Promise<Selector[]> {
+        return this.post(Endpoint.listStrings, {
+            segment_names: ['__objc_methname']
+        }).then(this.decodeSelectors);
+    }
+    
+    listSelrefs(stringAddress: number): Promise<Xref[]> {
+        return this.post(Endpoint.listSelrefs, {
+            string_address: stringAddress
+        }).then(this.decodeXrefs);
     }
     
     // Decompile //

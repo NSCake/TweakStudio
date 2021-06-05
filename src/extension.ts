@@ -80,6 +80,18 @@ export function activate(context: vscode.ExtensionContext) {
         const doc = await workspace.openTextDocument(uri);
         await window.showTextDocument(doc, { preview: false });
 	}));
+	
+	// Show selrefs from strings
+	context.subscriptions.push(commands.registerCommand('ida.show-selrefs', async (address: number) => {
+		const refs = await DocumentManager.shared.activeClient.listSelrefs(address);
+		const quickPick = window.createQuickPick();
+		quickPick.items = refs.map(r => ({ label: r.label }));
+		quickPick.onDidChangeSelection(selection => {
+			window.showInformationMessage(selection[0].label);
+		});
+		quickPick.onDidHide(() => quickPick.dispose());
+		quickPick.show();
+	}));
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
