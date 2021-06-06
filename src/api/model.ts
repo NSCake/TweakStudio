@@ -16,11 +16,17 @@ export class Segment extends vscode.TreeItem {
 
 export class Symbol extends vscode.TreeItem {
     constructor(
+        readonly scheme: string,
         readonly label: string,
         readonly address: number,
         readonly segment: string,
     ) {
         super(label);
+        this.command = {
+            command: `${scheme}.show-xrefs`,
+            title: 'Show xrefs',
+            arguments: [this.address]
+        }
     }
 }
 
@@ -60,7 +66,7 @@ export type String = Symbol;
 
 export class Selector extends Symbol {
     constructor(scheme: string, label: string, address: number, segment: string) {
-        super(label, address, segment);
+        super(scheme, label, address, segment);
         this.command = {
             command: `${scheme}.show-selrefs`,
             title: 'Show selector refs',
@@ -71,14 +77,14 @@ export class Selector extends Symbol {
 
 export class Procedure extends Symbol {
     constructor(
-        readonly scheme: string,
+        scheme: string,
         readonly name: string,
         readonly decl: string,
         readonly address: number,
         readonly segment: string
     ) {
         // We want the declaration displayed instead of the name
-        super(decl, address, segment);
+        super(scheme, decl, address, segment);
         this.command = {
             command: `${scheme}.view-pseudocode`,
             title: 'View pseudocode',

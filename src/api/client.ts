@@ -16,6 +16,13 @@ type ProxyResponse<T> = { data: T }
 type ProxyErrorResponse = { data: null, error: string };
 type LabelData = { label: string, address: number, segment: string };
 type ProcData = LabelData & { decl: string };
+
+/** 
+ * We only care about xrefs within functions since we automate
+ * the process of finding a selector, finding the matching selref,
+ * and then looking at the references in code. Also, we only
+ * provide a way to look at references within psc or disasm anyway.
+ */
 type XrefData = {
     address: number,
     functionName: string,
@@ -65,7 +72,7 @@ class APIClient {
     }
     
     protected decodeSymbols: (symbols: LabelData[]) => Symbol[] = (items) => {
-        return items.map(s => this.decode(Symbol, [s.label, s.address, s.segment]));
+        return items.map(s => this.decode(Symbol, [this.scheme, s.label, s.address, s.segment]));
     }
     
     protected decodeSelectors: (symbols: LabelData[]) => Symbol[] = (items) => {
@@ -165,19 +172,17 @@ class APIClient {
         }).then(this.decodeXrefs);
     }
     
+    listXrefs(address: number): Promise<Xref[]> {
+        return this.post(Endpoint.listXrefs, {
+            address: address
+        }).then(this.decodeXrefs);
+    }
+    
     // Decompile //
     
     decompileProcedure(address: number): Promise<string> {
         return this.post(Endpoint.decompile, { procedure_address: address });
     }
-
-    // Search //
-
-    // search(type: SearchType, query: string): Promise<SearchResults> {
-    //     return this.l3Post(Endpoint.search, {
-    //         mode: "display", type: type, query: query
-    //     });
-    // }
     
     // Shutdown //
     

@@ -257,6 +257,26 @@ class ListSelectorXRefs:
         return []
                     
 
+class ListXrefs:
+    PATH = "/xrefs"
+
+    @classmethod
+    def run(cls, address):
+        line = sark.Line(ea=address)
+        if not line:
+            return []
+        
+        # Enumerate all references to this address
+        results = {}
+        for ref in line.drefs_to:
+            lineno, data = pscDataForAddress(ref)
+            # Store first ref for each line number
+            if data and not lineno in results:
+                results[lineno] = data
+        
+        return results.values()
+
+
 class DecompileProcedure:
     PATH = "/decompile"
 
@@ -316,6 +336,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             ListStrings,
             DisassembleProcedure,
             ListSelectorXRefs,
+            ListXrefs,
         ]:
             if self.path == handler.PATH:
                 try:

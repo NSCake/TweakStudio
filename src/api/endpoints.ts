@@ -13,6 +13,7 @@ enum Endpoint {
     listProcedures = "/procedures",
     listStrings = "/strings",
     listSelrefs = "/sel_xrefs",
+    listXrefs = "/xrefs",
     
     decompile = "/decompile",
     

@@ -79,9 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
 		DocumentManager.shared.showDocument(uri, lineno);
 	}));
 	
-	// Show selrefs from strings
-	context.subscriptions.push(commands.registerCommand('ida.show-selrefs', async (address: number) => {
-		const refs = await DocumentManager.shared.activeClient.listSelrefs(address);
+	function showXrefPicker(refs: Xref[]) {
 		const quickPick = window.createQuickPick();
 		quickPick.items = refs;
 		quickPick.onDidChangeSelection((selection: Xref[]) => {
@@ -90,6 +88,17 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 		quickPick.onDidHide(() => quickPick.dispose());
 		quickPick.show();
+	}
+	
+	// Show selrefs from selector strings
+	context.subscriptions.push(commands.registerCommand('ida.show-selrefs', async (address: number) => {
+		const refs = await DocumentManager.shared.activeClient.listSelrefs(address);
+		showXrefPicker(refs);
+	}));
+	// Show xrefs from everything else
+	context.subscriptions.push(commands.registerCommand('ida.show-xrefs', async (address: number) => {
+		const refs = await DocumentManager.shared.activeClient.listXrefs(address);
+		showXrefPicker(refs);
 	}));
 }
 
