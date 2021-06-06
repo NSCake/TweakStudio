@@ -6,6 +6,11 @@
 #  Originated from file created by Ethan Arbuckle on 2021-03-05
 #  Copyright (c) 2021 Ethan Arbuckle and Tanner Bennett. All rights reserved.
 #
+#  References and libraries used:
+#  Demangle inhibitor flags: https://github.com/rcx/ida-scripts/blob/master/cfg/ida.cfg
+#  Sark: https://github.com/tmr232/Sark
+#  FIDL: https://github.com/fireeye/FIDL
+#
 
 import json
 import traceback
