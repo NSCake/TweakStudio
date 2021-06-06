@@ -11,7 +11,7 @@ import * as vscode from 'vscode';
 import { window, workspace, commands, Uri } from 'vscode';
 import HopperClient from './api/hopper';
 import IDAClient from './api/ida';
-import { Xref } from './api/model';
+import { Procedure, Xref } from './api/model';
 import HopperBootstrap from './bootstrap/hopper';
 import IdaBootstrap from './bootstrap/ida';
 import DocumentManager, { DisassemblerFamily } from './document-manager';
@@ -105,6 +105,32 @@ export function activate(context: ContextExtended) {
     context.registerCommand('ida.show-xrefs', async (address: number) => {
         const refs = await DocumentManager.shared.activeClient.listXrefs(address);
         showXrefPicker(refs);
+    });
+    
+    // Add a comment to a virtual document
+    context.registerCommand('ida.add-comment', async () => {
+        if (!vscode.window.activeTextEditor) {
+            return; // No active editor
+        }
+        
+        const editor = vscode.window.activeTextEditor;
+        if (editor.document.uri.scheme !== 'ida') {
+            return; // Not our scheme
+        }
+        
+        if (!editor.selection.isSingleLine) {
+            return; // Can only add comments for one line at a time
+        }
+        
+        const line = editor.selection.start.line;
+        const uri = editor.document.uri;
+        const funcAddr = Procedure.parseURI(uri).addr;
+        
+        // Prompt for input
+        const comment = await window.showInputBox({ prompt: "Add/edit a comment" });
+        // Submit the comment
+        DocumentManager.shared.activeClient.addComment(funcAddr, line, comment);
+        // TODO: refresh document?
     });
 }
 

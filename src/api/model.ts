@@ -95,4 +95,13 @@ export class Procedure extends Symbol {
     get path(): string {
         return [this.segment, this.address, this.name].join('/') + '.m';
     }
+    
+    static parseURI(uri: vscode.Uri): { segment: string, addr: number, name: string } | undefined {
+        const components = uri.path.split('/');
+        if (components.length != 3) {
+            return undefined;
+        }
+        
+        return { segment: components[0], addr: parseInt(components[1]), name: components[2] };
+    }
 }

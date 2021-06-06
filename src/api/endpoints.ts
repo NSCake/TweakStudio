@@ -15,6 +15,8 @@ enum Endpoint {
     listSelrefs = "/sel_xrefs",
     listXrefs = "/xrefs",
     
+    addComment = "/add_comment",
+    
     decompile = "/decompile",
     
     shutdown = "/shutdown",

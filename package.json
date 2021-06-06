@@ -68,6 +68,11 @@
             {
                 "command": "ida.open-test",
                 "title": "Open dummy binary in IDA"
+            },
+            {
+                "command": "ida.add-comment",
+                "title": "Add a comment (IDA)",
+                "when": "resourceScheme == ida && editorTextFocus"
             }
         ],
         "configuration": [

@@ -178,6 +178,14 @@ class APIClient {
         }).then(this.decodeXrefs);
     }
     
+    // Comments //
+    
+    addComment(funcAddr: number, line: number, comment: string): Promise<void> {
+        return this.post(Endpoint.addComment, {
+            function: funcAddr, line_number: line, comment: comment
+        });
+    }
+    
     // Decompile //
     
     decompileProcedure(address: number): Promise<string> {
