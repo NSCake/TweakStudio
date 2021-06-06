@@ -65,10 +65,10 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         await window.showTextDocument(doc, { preview: false });
         
         // Scroll to the given line, if given a line
-		if (lineno !== undefined) {
-			const line = doc.lineAt(new VSCode.Position(lineno-1, 0)).range;
-			window.activeTextEditor.revealRange(line, VSCode.TextEditorRevealType.InCenterIfOutsideViewport);
-		}
+        if (lineno !== undefined) {
+            const line = doc.lineAt(new VSCode.Position(lineno-1, 0)).range;
+            window.activeTextEditor.revealRange(line, VSCode.TextEditorRevealType.InCenterIfOutsideViewport);
+        }
     }
     
     private async documentforURI(uri: VSCode.Uri): Promise<VSCode.TextDocument> {
@@ -89,7 +89,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         const selection = await VSCode.window.showOpenDialog({ 'canSelectMany': false });
         if (selection) {
             await this.startNewClient(selection[0].path, family);
-		}
+        }
     }
     
     public async startNewClient(path: string, family: DisassemblerFamily) {
