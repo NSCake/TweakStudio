@@ -29,13 +29,17 @@ export interface DisassemblerFamily {
 export default class DocumentManager implements VSCode.TextDocumentContentProvider {
     static shared = new DocumentManager();
     
-    clients: APIClient[] = [];
-    activeClient: APIClient | undefined;
+    private clients: APIClient[] = [];
+    private _activeClient: APIClient | undefined;
+    
+    public get activeClient(): APIClient | undefined {
+        return this._activeClient;
+    }
     
     // hooksProvider = new HooksProvider();
-    procsProvider = new ProceduresProvider();
-    selectorsProvider = new SelectorsProvider();
-    stringsProvider = new StringsProvider();
+    private procsProvider = new ProceduresProvider();
+    private selectorsProvider = new SelectorsProvider();
+    private stringsProvider = new StringsProvider();
     
     private get allProviders(): AnyProvider[] {
         return [
@@ -43,20 +47,20 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         ];
     }
     
-    registerViews() {
+    public registerViews() {
         // window.registerTreeDataProvider('hooks', this.hooksProvider);
         window.registerTreeDataProvider('procs', this.procsProvider);
         window.registerTreeDataProvider('selectors', this.selectorsProvider);
         window.registerTreeDataProvider('strings', this.stringsProvider);
     }
     
-    registerDocumentProviders(context: VSCode.ExtensionContext) {
+    public registerDocumentProviders(context: VSCode.ExtensionContext) {
         // Register a content provider for the two schemes
         context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('hopper', this));
         context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('ida', this));
     }
     
-    async showDocument(uri: VSCode.Uri, lineno?: number) {
+    public async showDocument(uri: VSCode.Uri, lineno?: number) {
         const doc = await this.documentforURI(uri);
         await window.showTextDocument(doc, { preview: false });
         
@@ -80,7 +84,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     
     // Client management //
     
-    async promptToStartNewClient(family: DisassemblerFamily) {
+    public async promptToStartNewClient(family: DisassemblerFamily) {
         // Show file picker
         const selection = await VSCode.window.showOpenDialog({ 'canSelectMany': false });
         if (selection) {
@@ -88,7 +92,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
 		}
     }
     
-    async startNewClient(path: string, family: DisassemblerFamily) {
+    public async startNewClient(path: string, family: DisassemblerFamily) {
         try {
             // Activate our view
             VSCode.commands.executeCommand('workbench.view.extension.tweakstudio');
@@ -102,7 +106,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         }
     }
     
-    addClient(client: APIClient, activate: boolean) {
+    private addClient(client: APIClient, activate: boolean) {
         this.clients.push(client);
         
         if (activate) {
@@ -110,21 +114,21 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         }
     }
     
-    switchToClient(client: APIClient) {
-        this.activeClient = client;
+    public switchToClient(client: APIClient) {
+        this._activeClient = client;
 
         for (const provider of this.allProviders) {
             provider.client = client;
         }
     }
     
-    clientWithID(id: string): APIClient | undefined {
+    private clientWithID(id: string): APIClient | undefined {
         return this.clients.filter(c => c.id == id)[0];
     }
     
-    shutdown() {
+    public shutdown() {
         this.clients.forEach(c => c.shutdown());
-        this.activeClient = undefined;
+        this._activeClient = undefined;
         this.clients = [];
     }
     
