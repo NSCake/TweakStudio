@@ -57,7 +57,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     }
     
     async showDocument(uri: VSCode.Uri, lineno?: number) {
-        const doc = await workspace.openTextDocument(uri);
+        const doc = await this.documentforURI(uri);
         await window.showTextDocument(doc, { preview: false });
         
         // Scroll to the given line, if given a line
@@ -67,7 +67,18 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
 		}
     }
     
-    // Private //
+    private async documentforURI(uri: VSCode.Uri): Promise<VSCode.TextDocument> {
+        // Check if document is open first
+        for (const editor of window.visibleTextEditors) {
+            if (editor.document.uri.toString() == uri.toString()) {
+                return editor.document;
+            }
+        }
+        
+        return workspace.openTextDocument(uri);
+    }
+    
+    // Client management //
     
     async promptToStartNewClient(family: DisassemblerFamily) {
         // Show file picker

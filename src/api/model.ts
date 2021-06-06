@@ -49,7 +49,7 @@ export class Xref implements vscode.QuickPickItem {
     }
     
     get path(): string {
-        return ['__text', this.address, this.functionName].join('/') + '.m';
+        return ['__text', this.functionAddress, this.functionName].join('/') + '.m';
     }
     
     get action(): vscode.Command {
