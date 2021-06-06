@@ -12,6 +12,7 @@ import traceback
 import http.client
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import FIDL.decompiler_utils as du
 from ida_hexrays import *
 from idautils import *
 from idaapi import *
