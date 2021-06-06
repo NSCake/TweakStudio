@@ -341,24 +341,31 @@ class RequestHandler(BaseHTTPRequestHandler):
             if self.path == handler.PATH:
                 try:
                     data_response = handler.run(**posted_data)
-                    self.send_response(200)
+                    self.respond(200, data_response)
                 except TypeError as e:
-                    self.send_response(500)
                     error = str(e) + '\n' + traceback.format_exc()
+                    self.respond(500, None, error)
                 except Exception as e:
-                    self.send_response(500)
                     error = str(e) + '\n' + traceback.format_exc()
-
-                response = {"data": data_response}
-                if error:
-                    response["error"] = error
-
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps(response, default=lambda o: '').encode("utf-8"))
+                    self.respond(500, None, error)
                 
                 if wantsShutdown:
                     server.shutdown()
+                
+                break
+        else:
+            self.respond(404, None, "Unknown endpoint: " + self.path)
+    
+    def respond(self, status, data, error=None):
+        response = {"data": data}
+        if error:
+            response["error"] = error
+        
+        self.send_response(status)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(response, default=lambda o: '').encode("utf-8"))
+            
 
 
 if __name__ == "__main__":
