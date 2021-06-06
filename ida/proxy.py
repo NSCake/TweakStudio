@@ -92,6 +92,53 @@ def segment_containsLine(self, line):
 def function_containsAddress(self, addr):
     return (addr >= self.startEA) and (addr < self.endEA)
 
+def pscDataForAddress(addr):
+    # Iterate over all functions until we find the one containing this address
+    allfuncs = sark.Segment(name='__text').functions
+    for func in allfuncs:
+        if func.containsAddress(addr):
+            # Decompile this function
+            cfunc = decompile(func.startEA) # type: cfuncptr_t
+            psc = cfunc.pseudocode
+            
+            # Map...
+            
+            # Line numbers to groups of citems per line
+            linesToCItems = {}
+            for lineNumber in xrange(psc.size()):
+                lineText = psc[lineNumber].line
+                # Parse out citem indexes from the line's tags
+                linesToCItems[lineNumber] = du.lex_citem_indexes(lineText)
+            
+            # Citem indexes to line numbers
+            citemsToLines = {}
+            for lineno, citems in linesToCItems.items():
+                for citemIdx in citems:
+                    citemsToLines[citemIdx] = lineno
+            
+            # Line numbers (1-indexed) to line content
+            codeLines = {}
+            for idx, sline in enumerate(psc):
+                # tag_remove removes the color codes
+                codeLines[idx + 1] = tag_remove(sline.line)
+
+            # Now, find the nearest line to our address
+            for item in cfunc.treeitems:
+                # Citem addresses may be off by as much as 4
+                if abs(item.ea - addr) <= 4:
+                    # Get the line number and return the data
+                    lineno = citemsToLines[item.index] + 1
+                    return (lineno, {
+                        "address": addr,
+                        "functionName": sark.demangle(func.name, 8),
+                        "functionDecl": func.demangled,
+                        "functionAddress": func.startEA,
+                        "lineNumber": lineno,
+                        "lineContent": codeLines[lineno],
+                    })
+    
+    return (-1, None)
+
 sark.Segment.containsLine = segment_containsLine
 sark.Function.containsAddress = function_containsAddress    
     
@@ -139,7 +186,8 @@ class ListProcedures:
         for function in segment.functions:
             named_procedures.append(
                 {
-                    "label": function.demangled,
+                    "label": sark.demangle(function.name, 8),
+                    "decl": function.demangled,
                     "address": function.startEA,
                     "segment": segment_name,
                     # "obj": reflect(function)
@@ -177,7 +225,6 @@ class ListSelectorXRefs:
     @classmethod
     def run(cls, string_address):
         selrefs = sark.Segment(name='__objc_selrefs')
-        allfuncs = sark.Segment(name='__text').functions
         
         # Get the line for this selector
         line = sark.Line(ea=string_address)
@@ -191,33 +238,15 @@ class ListSelectorXRefs:
             if sel and selrefs.containsLine(sel):
                 # Then, list all references to that selref
                 refs = [ref for ref in sel.drefs_to]
-                results = []
-                # Loop over each selref ref
+                results = {}
+                # Loop over each selref ref and find the pseudocode
                 for ref in refs:
-                    # ... and find its matching function
-                    for func in allfuncs:
-                        if func.containsAddress(ref):
-                            # Attempt to convert ref to a line of decompiled code
-                            code = '?'
-                            cfunc = decompile(func.startEA) # type: cfuncptr_t
-                            lines = cfunc.treeitems # type: ctree_items_t
-                            # Check each line of the pseudocode for a matching address
-                            for item in lines:
-                                item = item # type: citem_t
-                                if item.ea >= ref:
-                                    code = item.cexpr.string if item.is_expr() else 'not expr'
-                                    break
-                            else:
-                                code = 'no lines'
-                            
-                            results.append(
-                                {
-                                    "label": func.demangled + ': ' + code,
-                                    "address": ref
-                                }
-                            )
+                    lineno, data = pscDataForAddress(ref)
+                    # Store first ref for each line number
+                    if data and not lineno in results:
+                        results[lineno] = data
                 
-                return results
+                return results.values()
         
         # Probably not a selector, or has no references
         return []
@@ -238,8 +267,7 @@ class DecompileProcedure:
         if procedure_candidate:
             lines = []
             cfunc = decompile(procedure_address) # type: cfuncptr_t
-            pscode = cfunc.get_pseudocode()
-            for line in pscode:
+            for line in cfunc.pseudocode:
                 lines.append(tag_remove(line.line))
                 
             return "\n".join(lines)

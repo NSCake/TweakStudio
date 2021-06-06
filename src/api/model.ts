@@ -24,12 +24,35 @@ export class Symbol extends vscode.TreeItem {
     }
 }
 
-export class Xref extends vscode.TreeItem {
+export class Xref implements vscode.QuickPickItem {
     constructor(
-        readonly label: string,
         readonly address: number,
-    ) {
-        super(label);
+        readonly functionName: string,
+        readonly functionDecl: string,
+        readonly functionAddress: number,
+        readonly lineNumber: number,
+        readonly lineContent: string,
+    ) { }
+    
+    get label(): string {
+        return `${this.functionName}:${this.lineNumber}`
+    }
+    
+    get detail(): string {
+        return this.lineContent;
+    }
+    
+    get path(): string {
+        return ['__text', this.address, this.functionName].join('/') + '.m';
+    }
+    
+    get action(): vscode.Command {
+        const scheme = 'ida'; // For now, only IDA supports this
+        return {
+            command: `${scheme}.view-pseudocode`,
+            title: 'Show reference in pseudocode',
+            arguments: [this.path, this.lineNumber]
+        }
     }
 }
 
@@ -47,8 +70,15 @@ export class Selector extends Symbol {
 }
 
 export class Procedure extends Symbol {
-    constructor(scheme: string, label: string, address: number, segment: string) {
-        super(label, address, segment);
+    constructor(
+        readonly scheme: string,
+        readonly name: string,
+        readonly decl: string,
+        readonly address: number,
+        readonly segment: string
+    ) {
+        // We want the declaration displayed instead of the name
+        super(decl, address, segment);
         this.command = {
             command: `${scheme}.view-pseudocode`,
             title: 'View pseudocode',
@@ -57,6 +87,6 @@ export class Procedure extends Symbol {
     }
     
     get path(): string {
-        return [this.segment, this.address, this.label].join('/') + '.m';
+        return [this.segment, this.address, this.name].join('/') + '.m';
     }
 }

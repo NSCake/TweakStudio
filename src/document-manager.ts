@@ -7,7 +7,7 @@
 //
 
 import * as VSCode from 'vscode';
-import { window } from 'vscode';
+import { window, workspace } from 'vscode';
 import APIClient from './api/client';
 import HopperClient from './api/hopper';
 import DisassemblerBootstrap from './bootstrap/bootstrap';
@@ -54,6 +54,17 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         // Register a content provider for the two schemes
         context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('hopper', this));
         context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('ida', this));
+    }
+    
+    async showDocument(uri: VSCode.Uri, lineno?: number) {
+        const doc = await workspace.openTextDocument(uri);
+        await window.showTextDocument(doc, { preview: false });
+        
+        // Scroll to the given line, if given a line
+		if (lineno !== undefined) {
+			const line = doc.lineAt(new VSCode.Position(lineno-1, 0)).range;
+			window.activeTextEditor.revealRange(line, VSCode.TextEditorRevealType.InCenterIfOutsideViewport);
+		}
     }
     
     // Private //

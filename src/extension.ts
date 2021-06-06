@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { window, workspace, commands, Uri } from 'vscode';
 import HopperClient from './api/hopper';
 import IDAClient from './api/ida';
+import { Xref } from './api/model';
 import HopperBootstrap from './bootstrap/hopper';
 import IdaBootstrap from './bootstrap/ida';
 import DocumentManager, { DisassemblerFamily } from './document-manager';
@@ -68,26 +69,24 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 
 	// Open a pseudocode document
-	context.subscriptions.push(commands.registerCommand('hopper.view-pseudocode', async (path: string) => {
-		const uri = Uri.parse('hopper:' + path);
-        const doc = await workspace.openTextDocument(uri);
-        await window.showTextDocument(doc, { preview: false });
+	context.subscriptions.push(commands.registerCommand('hopper.view-pseudocode', async (path: string, lineno?: number) => {
+		DocumentManager.shared.showDocument(Uri.parse('hopper:' + path), lineno);
 	}));
-	context.subscriptions.push(commands.registerCommand('ida.view-pseudocode', async (path: string) => {
+	context.subscriptions.push(commands.registerCommand('ida.view-pseudocode', async (path: string, lineno?: number) => {
 		// DocumentManager.shared.switchToClient()
 		const port = DocumentManager.shared.activeClient.id;
         const uri = Uri.parse('ida:' + path).with({ query: port });
-        const doc = await workspace.openTextDocument(uri);
-        await window.showTextDocument(doc, { preview: false });
+		DocumentManager.shared.showDocument(uri, lineno);
 	}));
 	
 	// Show selrefs from strings
 	context.subscriptions.push(commands.registerCommand('ida.show-selrefs', async (address: number) => {
 		const refs = await DocumentManager.shared.activeClient.listSelrefs(address);
 		const quickPick = window.createQuickPick();
-		quickPick.items = refs.map(r => ({ label: r.label }));
-		quickPick.onDidChangeSelection(selection => {
-			window.showInformationMessage(selection[0].label);
+		quickPick.items = refs;
+		quickPick.onDidChangeSelection((selection: Xref[]) => {
+			const cmd = selection[0].action;
+			commands.executeCommand(cmd.command, ...cmd.arguments);
 		});
 		quickPick.onDidHide(() => quickPick.dispose());
 		quickPick.show();

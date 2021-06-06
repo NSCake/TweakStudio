@@ -12,9 +12,18 @@ import { hostname } from "os";
 import { Symbol, Segment, Procedure, String, Selector, Xref } from "./model";
 import { window } from "vscode";
 
-type LabelData = { label: string, address: number, segment?: string };
 type ProxyResponse<T> = { data: T }
 type ProxyErrorResponse = { data: null, error: string };
+type LabelData = { label: string, address: number, segment: string };
+type ProcData = LabelData & { decl: string };
+type XrefData = {
+    address: number,
+    functionName: string,
+    functionDecl: string,
+    functionAddress: number,
+    lineNumber: number,
+    lineContent: string,
+};
 
 function isError(obj: any): obj is Error {
     return false;
@@ -51,8 +60,8 @@ class APIClient {
     //     return items.map(s => this.decode(type, args));
     // }
     
-    protected decodeProcedures: (symbols: LabelData[]) => Procedure[] = (items) => {
-        return items.map(s => this.decode(Procedure, [this.scheme, s.label, s.address, s.segment]));
+    protected decodeProcedures: (symbols: ProcData[]) => Procedure[] = (items) => {
+        return items.map(s => this.decode(Procedure, [this.scheme, s.label, s.decl, s.address, s.segment]));
     }
     
     protected decodeSymbols: (symbols: LabelData[]) => Symbol[] = (items) => {
@@ -63,8 +72,15 @@ class APIClient {
         return items.map(s => this.decode(Selector, [this.scheme, s.label, s.address, s.segment]));
     }
     
-    protected decodeXrefs: (symbols: LabelData[]) => Xref[] = (items) => {
-        return items.map(s => this.decode(Xref, [s.label, s.address]));
+    protected decodeXrefs: (symbols: XrefData[]) => Xref[] = (items) => {
+        return items.map(s => this.decode(Xref, [
+            s.address,
+            s.functionName,
+            s.functionDecl,
+            s.functionAddress,
+            s.lineNumber,
+            s.lineContent.trim()
+        ]));
     }
     
     protected decodeSegments: (names: string[]) => Segment[] = (items) => {
