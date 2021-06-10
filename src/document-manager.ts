@@ -26,7 +26,7 @@ export interface DisassemblerFamily {
     bootstrap: DisassemblerBootstrap;
 }
 
-export default class DocumentManager implements VSCode.TextDocumentContentProvider {
+export default class DocumentManager implements VSCode.TextDocumentContentProvider {    
     static shared = new DocumentManager();
     
     private clients: APIClient[] = [];
@@ -62,7 +62,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     
     public async showDocument(uri: VSCode.Uri, lineno?: number) {
         const doc = await this.documentforURI(uri);
-        await window.showTextDocument(doc, { preview: false });
+        await window.showTextDocument(doc, { preview: true });
         
         // Scroll to the given line, if given a line
         if (lineno !== undefined) {

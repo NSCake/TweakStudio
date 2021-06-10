@@ -46,7 +46,6 @@ export function activate(context: ContextExtended) {
     
     // Read settings
     reloadSettings();
-    let path = workspace.getConfiguration('tweakstudio.hopper').get('path');
     // Observe settings changes
     workspace.onDidChangeConfiguration(reloadSettings);
     
