@@ -66,6 +66,12 @@ collections = [dict, list, itertools.imap, types.GeneratorType]
 nonListLists = [itertools.imap, types.GeneratorType]
 excluded = [ida_funcs.func_t]
 
+def decomp(addr):
+    # Decompile this function
+    cfunc = decompile(addr) # type: cfuncptr_t
+    psc = cfunc.pseudocode # type: strvec_t
+    return (cfunc, psc)
+
 def safe_getattr(obj, key):
     try:
         return getattr(obj, key)
@@ -106,6 +112,91 @@ def segment_containsLine(self, line):
 
 def function_containsAddress(self, addr):
     return (addr >= self.startEA) and (addr < self.endEA)
+    
+def citem_by_pos(psc, lineno, col):
+    """
+    Return the ctree item index corresponding to a zero-based (line, column) position.
+    """
+    
+    if lineno >= psc.size():
+        raise Exception("Line index out of bounds for function")
+    
+    line = psc[lineno].line
+
+    # Position in the actual string, including color codes
+    i = 0
+    # Position in the displayed string, no color codes
+    c = 0
+    last_idx = None
+    line_length = len(line)
+    
+    if col >= line_length:
+        raise Exception("Column index out of bounds for line")
+
+    # lex COLOR_ADDR tokens from the line of text
+    while i < line_length:
+        
+        # Did we finally reach the given column?
+        if c >= col:
+            return last_idx
+
+        # does this character mark the start of a new COLOR_* token?
+        if line[i] == COLOR_ON:
+            # yes, so move past the COLOR_ON byte
+            i += 1
+
+            # is this sequence for a COLOR_ADDR?
+            if ord(line[i]) == COLOR_ADDR:
+                # yes, so move past the COLOR_ADDR byte
+                i += 1
+
+                # A COLOR_ADDR token is followed by either 8, or 16 characters
+                # (a hex encoded number) that represents an address/pointer.
+                # in this context, it is actually the index number of a citem
+                citem_index = int(line[i:i + COLOR_ADDR_SIZE], 16)
+                i += COLOR_ADDR_SIZE
+
+                # SANITY CHECK
+                # NOTE: this value is arbitrary (although reasonable)
+                # FIX: get this from cfunc.treeitems.size()
+                if citem_index < 0x1000:
+                    # save the extracted citem index
+                    last_idx = citem_index
+            
+            # skip past the color code
+            else:
+                i += 1
+        # does this character mark the end of a color code tag?
+        elif line[i] == COLOR_OFF:
+            # skip past COLOR_OFF as well as the color code
+            i += 2
+        
+        # nothing we care about happened, keep lexing forward
+        else:
+            i += 1
+            c += 1
+
+    # Impossible!
+    raise Exception("Fatal error in citem_by_pos(): (c: " + str(c) + ", col: " + str(col) + ")")
+
+
+class dbg_LineData:
+    PATH = "/line_data"
+    
+    @classmethod
+    def run(cls, addr, line):
+        cfunc, psc = decomp(addr)
+        t = psc[line].line
+        return {'line': tag_remove(t), 'bytes': bytes(t.encode("utf-8")),
+            'tags': {
+                'COLOR_ON': str(COLOR_ON),
+                'COLOR_OFF': str(COLOR_OFF),
+                'COLOR_ADDR': str(COLOR_ADDR),
+                'COLOR_ESC': str(COLOR_ESC),
+                'COLOR_INV': str(COLOR_INV),
+            }
+        }
+
 
 def pscDataForAddress(addr):
     # Iterate over all functions until we find the one containing this address
@@ -114,13 +205,13 @@ def pscDataForAddress(addr):
         if func.containsAddress(addr):
             # Decompile this function
             cfunc = decompile(func.startEA) # type: cfuncptr_t
-            psc = cfunc.pseudocode
+            psc = cfunc.pseudocode # type: strvec_t
             
             # Map...
             
             # Line numbers to groups of citems per line
             linesToCItems = {}
-            for lineNumber in xrange(psc.size()):
+            for lineNumber in range(psc.size()):
                 lineText = psc[lineNumber].line
                 # Parse out citem indexes from the line's tags
                 linesToCItems[lineNumber] = du.lex_citem_indexes(lineText)
@@ -287,6 +378,18 @@ class ListXrefs:
         return results.values()
 
 
+class SymbolForAddress:
+    PATH = "/symbolicate"
+    
+    @classmethod
+    def run(cls, addr):
+        line = sark.Line(ea=addr)
+        if line:
+            return line.name
+        
+        return None
+
+
 class DecompileProcedure:
     PATH = "/decompile"
 
@@ -300,14 +403,51 @@ class DecompileProcedure:
 
         procedure_candidate = sark.Function(ea=procedure_address)        
         if procedure_candidate:
-            lines = []
             cfunc = decompile(procedure_address) # type: cfuncptr_t
-            for line in cfunc.pseudocode:
-                lines.append(tag_remove(line.line))
-                
-            return "\n".join(lines)
+            return str(cfunc)
 
         raise Exception("Failed to find the specified procedure")
+
+
+class ListProcedureCTreeItems:
+    PATH = "/ctree_items"
+
+    @classmethod
+    def run(cls, addr):
+        
+        # Map line numbers to groups of citems per line
+        # linesToCItems = {}
+        # for lineNumber in range(psc.size()):
+        #     lineText = psc[lineNumber].line
+        #     # Parse out citem indexes from the line's tags
+        #     linesToCItems[lineNumber] = du.lex_citem_indexes(lineText)
+        
+        return []
+
+
+class ExprTypeUnderCursor:
+    PATH = "/expr_at_pos"
+    
+    @classmethod
+    def run(cls, addr, line, col):
+        cfunc, psc = decomp(addr)
+        idx = citem_by_pos(psc, line, col)
+        if idx:
+            expr = cfunc.treeitems[idx].cexpr # type: cexpr_t
+            obj_ea = expr.x.obj_ea if expr.op == cot_ref else expr.obj_ea
+            var = cfunc.lvars[expr.v.idx].name if expr.op == cot_var else None
+            return {
+                'type': expr.op,
+                'citem': idx,
+                'data': {
+                    'name': var if var else SymbolForAddress.run(obj_ea),
+                    'lvar': expr.v.idx if var else -1,
+                    'obj_ea': obj_ea,
+                }
+            }
+        
+        # No expr under cursor
+        return {'type': -1}
 
 
 class DisassembleProcedure:
@@ -330,6 +470,42 @@ class DisassembleProcedure:
         return disassembly
 
 
+class PerformEditorAction:
+    PATH = "/editor_action"
+    
+    @classmethod
+    def run(cls, action, args):
+        if not action:
+            return None
+        
+        if action == EditorAction.addComment:
+            return False
+        elif action == EditorAction.renameVar:
+            # lineno = args.line
+            # col = args.col
+            funcAddr = args['funcAddr']
+            itemIdx = args['idx']
+            name = args['name']
+            clear = args['clear']
+            
+            # SOS
+            mark_cfunc_dirty(funcAddr)
+            clear_cached_cfuncs()
+            
+            cfunc = decompile(funcAddr) # type: cfuncptr_t
+            
+            # citem = cfunc.treeitems[itemIdx]
+            # lvar = cfunc.lvars[citem.cexpr.v.idx]
+            
+            window = open_pseudocode(funcAddr, False) # type: vdui_t
+            return window.rename_lvar(cfunc.lvars[itemIdx], name.encode("utf-8"), not clear)
+        
+        else:
+            return False
+        
+
+
+
 class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers.get("Content-Length", 0))
@@ -342,11 +518,16 @@ class RequestHandler(BaseHTTPRequestHandler):
             Shutdown,
             ListSegments,
             ListProcedures,
-            DecompileProcedure,
             ListStrings,
-            DisassembleProcedure,
             ListSelectorXRefs,
             ListXrefs,
+            SymbolForAddress,
+            DecompileProcedure,
+            DisassembleProcedure,
+            ExprTypeUnderCursor,
+            PerformEditorAction,
+            
+            dbg_LineData,
         ]:
             if self.path == handler.PATH:
                 try:
