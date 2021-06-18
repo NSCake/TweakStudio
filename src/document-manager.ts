@@ -7,11 +7,13 @@
 //
 
 import * as VSCode from 'vscode';
-import { window, workspace } from 'vscode';
-import APIClient from './api/client';
+import { InputBoxOptions, window, workspace } from 'vscode';
+import APIClient, { CursorPosition } from './api/client';
 import HopperClient from './api/hopper';
+import { Procedure } from './api/model';
 import DisassemblerBootstrap from './bootstrap/bootstrap';
 import HopperBootstrap from './bootstrap/hopper';
+import CleanIDAPseudocode from './psc/ida-psc-cleaner';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
 import { ProceduresProvider } from './views/procs';
@@ -22,7 +24,7 @@ type AnyProvider = BaseProvider<any>;
 
 export interface DisassemblerFamily {
     scheme: string;
-    client: typeof APIClient;
+    client: new(scheme: string, port: number) => APIClient;
     bootstrap: DisassemblerBootstrap;
 }
 
@@ -47,6 +49,10 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         ];
     }
     
+    private cleanNext: VSCode.Uri | undefined;
+    
+    // Initialization //
+    
     public registerViews() {
         // window.registerTreeDataProvider('hooks', this.hooksProvider);
         window.registerTreeDataProvider('procs', this.procsProvider);
@@ -59,6 +65,8 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('hopper', this));
         context.subscriptions.push(VSCode.workspace.registerTextDocumentContentProvider('ida', this));
     }
+    
+    // Documents //
     
     public async showDocument(uri: VSCode.Uri, lineno?: number) {
         const doc = await this.documentforURI(uri);
@@ -80,6 +88,56 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         }
         
         return workspace.openTextDocument(uri);
+    }
+    
+    // Misc //
+    
+    public get activeURI(): VSCode.Uri | undefined {
+        return this.activeEditor?.document.uri;
+    }
+    
+    public get activeEditor(): VSCode.TextEditor | undefined {
+        return DocumentManager.activeEditor(this.activeClient.scheme);
+    }
+    
+    public static activeEditor(scheme: string): VSCode.TextEditor | undefined {
+        const editor = VSCode.window.activeTextEditor;
+        return editor.document.uri.scheme == scheme ? editor : undefined;
+    }
+    
+    /**
+     * Executes the callback if the current editor's current scheme matches the given one,
+     * and if the selection is just a single position and not a real selection.
+     */
+    public static tryPerformEditorAction<T extends APIClient>(scheme: string, callback: (client: T, pos: CursorPosition) => void) {
+        const editor = this.activeEditor(scheme);
+        const allowed = editor // Must have active editor with same scheme
+            && editor.selection.isSingleLine; // Can only perform actions one line at a time
+        
+        if (allowed) {
+            const col = editor.selection.start.character;
+            const line = editor.selection.start.line;
+            const uri = editor.document.uri;
+            const funcAddr = Procedure.parseURI(uri).addr;
+            
+            const client: T = DocumentManager.shared.activeClient[scheme];
+            if (client) {
+                callback(client, { funcAddr: funcAddr, lineno: line, col: col });
+            }
+        }
+    }
+    
+    public static async takeInput(options: InputBoxOptions, callback: (input: string) => void) {
+        const input = await window.showInputBox(options);
+        if (input?.length) {
+            callback(input);
+        }
+    }
+    
+    public tryCleanPseudocode() {
+        const doc = this.activeEditor.document
+        this.cleanNext = doc.uri;
+        this.onDidChangeEmitter.fire(doc.uri);
     }
     
     // Client management //
@@ -138,11 +196,24 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     onDidChangeEmitter = new VSCode.EventEmitter<VSCode.Uri>();
     onDidChange = this.onDidChangeEmitter.event;
 
-    provideTextDocumentContent(uri: VSCode.Uri): VSCode.ProviderResult<string> {
+    async provideTextDocumentContent(uri: VSCode.Uri): Promise<string> {
+        const scheme = uri.scheme;
         const parts = uri.path.split('/');
         // const segment = parts[0];
         const address = parseInt(parts[1]);
         const id = uri.query;
-        return this.clientWithID(id)?.decompileProcedure(/* segment, */ address);
+        const code = await this.clientWithID(id)?.decompileProcedure(/* segment, */ address);
+        console.log(`Did decompile ${scheme} function at ${address}`)
+        
+        if (this.cleanNext?.toString() == uri.toString()) {
+            this.cleanNext = undefined;
+            switch (scheme) {
+                case 'ida': return CleanIDAPseudocode(code);
+            }
+            
+            console.log('Did clean pseudocode');
+        }
+        
+        return code;
     }
 }
