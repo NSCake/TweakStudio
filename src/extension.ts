@@ -33,17 +33,13 @@ const IDAFamily: DisassemblerFamily = {
     bootstrap: IdaBootstrap
 };
 
-interface ContextExtended extends vscode.ExtensionContext {
-    registerCommand(cmd: string, callback: (...args: any[]) => any);
-}
+function registerCommand(cmd: string, ctx: vscode.ExtensionContext, cb) {
+    ctx.subscriptions.push(commands.registerCommand(cmd, cb));
+};
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
-export function activate(context: ContextExtended) {
-    context.registerCommand = function(this: ContextExtended, cmd: string, cb) {
-        context.registerCommand(cmd, cb);
-    };
-    
+export function activate(context: vscode.ExtensionContext) {
     // Read settings
     reloadSettings();
     // Observe settings changes
@@ -58,26 +54,26 @@ export function activate(context: ContextExtended) {
     // Register commands //
     
     // Open a new document/database/binary in Hopper or IDA
-    context.registerCommand('hopper.open', async () => {
+    registerCommand('hopper.open', context, async () => {
         DocumentManager.shared.promptToStartNewClient(HopperFamily);
     });
-    context.registerCommand('ida.open', async () => {
+    registerCommand('ida.open', context, async () => {
         DocumentManager.shared.promptToStartNewClient(IDAFamily);
     });
     
     // For debugging, quickly open a dummy binary
-    context.registerCommand('hopper.open-test', async () => {
+    registerCommand('hopper.open-test', context, async () => {
         DocumentManager.shared.startNewClient(HopperBootstrap.testBinary, HopperFamily);
     });
-    context.registerCommand('ida.open-test', async () => {
+    registerCommand('ida.open-test', context, async () => {
         DocumentManager.shared.startNewClient(HopperBootstrap.testBinary, IDAFamily);
     });
 
     // Open a pseudocode document
-    context.registerCommand('hopper.view-pseudocode', async (path: string, lineno?: number) => {
+    registerCommand('hopper.view-pseudocode', context, async (path: string, lineno?: number) => {
         DocumentManager.shared.showDocument(Uri.parse('hopper:' + path), lineno);
     });
-    context.registerCommand('ida.view-pseudocode', async (path: string, lineno?: number) => {
+    registerCommand('ida.view-pseudocode', context, async (path: string, lineno?: number) => {
         // DocumentManager.shared.switchToClient()
         const port = DocumentManager.shared.activeClient.id;
         const uri = Uri.parse('ida:' + path).with({ query: port });
@@ -96,12 +92,12 @@ export function activate(context: ContextExtended) {
     }
     
     // Show selrefs from selector strings
-    context.registerCommand('ida.show-selrefs', async (address: number) => {
+    registerCommand('ida.show-selrefs', context, async (address: number) => {
         const refs = await DocumentManager.shared.activeClient.listSelrefs(address);
         showXrefPicker(refs);
     });
     // Show xrefs from everything else
-    context.registerCommand('ida.show-xrefs', async (address: number) => {
+    registerCommand('ida.show-xrefs', context, async (address: number) => {
         const refs = await DocumentManager.shared.activeClient.listXrefs(address);
         showXrefPicker(refs);
     });
