@@ -11,11 +11,31 @@ import Endpoint from "./endpoints";
 import { hostname } from "os";
 import { Symbol, Segment, Procedure, String, Selector, Xref } from "./model";
 import { window } from "vscode";
+import IDATokenType, { IDATokenInfo } from "./ida";
+import HopperClient from "./hopper";
 
 type ProxyResponse<T> = { data: T }
 type ProxyErrorResponse = { data: null, error: string };
 type LabelData = { label: string, address: number, segment: string };
 type ProcData = LabelData & { decl: string };
+
+export type CodeLine = {
+    funcAddr: number;
+    lineno: number;
+};
+export type CursorPosition = CodeLine & {
+    col: number;
+};
+
+export enum EditorAction {
+    renameVar = 1,
+    renameSymbol,
+    listXrefs,
+    addComment,
+    clearComment,
+    addVArg,
+    removeVArg,
+}
 
 /** 
  * We only care about xrefs within functions since we automate
@@ -40,11 +60,15 @@ function isErrorResponse(obj: any): obj is ProxyErrorResponse {
     return obj.error !== undefined && obj.data === null;
 }
 
-class APIClient {
+export interface IIDAClient {
+    getTokenTypeAtPosition(position: CursorPosition): Promise<IDATokenType>;
+}
+
+abstract class APIClient {
     protected port: number;
     protected baseURL: string;
     /** `ida` or `hopper` */
-    protected scheme: string;
+    public scheme: string;
 
     constructor(scheme: string, port: number) {
         this.port = port;
@@ -56,6 +80,14 @@ class APIClient {
     get id(): string {
         return this.port.toString();
     }
+    
+    get ida(): IDAClient | undefined {
+        return undefined;
+    }
+    
+    // get hopper(): HopperClient | undefined {        
+    //     return undefined;
+    // }
 
     // Private //
     
@@ -92,6 +124,10 @@ class APIClient {
     
     protected decodeSegments: (names: string[]) => Segment[] = (items) => {
         return items.map(s => this.decode(Segment, [s]));
+    }
+    
+    protected decodeToken: (token: any) => IDATokenInfo = (token) => {
+        return this.decode(IDATokenInfo, [token.data, token.type, token.idx]);
     }
 
     /** Sends a request with appropriate headers, JSON body, and handles all errors, even in the response. */
@@ -178,24 +214,61 @@ class APIClient {
         }).then(this.decodeXrefs);
     }
     
-    // Comments //
     
-    addComment(funcAddr: number, line: number, comment: string): Promise<void> {
-        return this.post(Endpoint.addComment, {
-            function: funcAddr, line_number: line, comment: comment
-        });
-    }
-    
-    // Decompile //
+    // Pseudocode //
     
     decompileProcedure(address: number): Promise<string> {
         return this.post(Endpoint.decompile, { procedure_address: address });
+    }
+    
+    // Editor actions //
+    
+    
+    canPerformActionOnToken(action: EditorAction, type: IDATokenType): boolean {
+        switch (action) {
+            case EditorAction.renameVar: return type == IDATokenType.variable;
+            case EditorAction.renameSymbol: return type == IDATokenType.symbol;
+            case EditorAction.listXrefs: return type == IDATokenType.symbol;
+            case EditorAction.addComment: return true;
+            case EditorAction.clearComment: return true;
+            case EditorAction.addVArg: break;
+            case EditorAction.removeVArg: break;
+            default: return false;
+        }
+    }
+    
+    addComment(pos: CodeLine, comment: string): Promise<boolean> {
+        return this.post(Endpoint.editorAction, { action: EditorAction.addComment, args: {
+            funcAddr: pos.funcAddr, line: pos.lineno, comment: comment
+        }});
     }
     
     // Shutdown //
     
     shutdown(saveOrNot: boolean = false): Promise<void> {
         return this.post(Endpoint.shutdown, { save: saveOrNot });
+    }
+}
+
+export class IDAClient extends APIClient {
+    getTokenInfoAtPosition(position: CursorPosition): Promise<IDATokenInfo> {
+        return this.post(Endpoint.cursorExprInfo, {
+            addr: position.funcAddr, line: position.lineno, col: position.col
+        }).then(this.decodeToken);
+    }
+    
+    /**
+     * Rename a local variable in the given function with the given citem index.
+     * Omit newName to clear the previously saved name.
+     */
+    renameLvar(funcAddr: number, idx: number, newName?: string): Promise<boolean> {
+        return this.post(Endpoint.editorAction, { action: EditorAction.renameVar, args: {
+            funcAddr: funcAddr, idx: idx, name: newName, clear: newName === undefined
+        }});
+    }
+    
+    get ida(): IDAClient | undefined {
+        return this;
     }
 }
 

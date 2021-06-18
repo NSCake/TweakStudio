@@ -16,6 +16,7 @@ import json
 import traceback
 import http.client
 import os
+from enum import IntEnum
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import FIDL.decompiler_utils as du
 from ida_hexrays import *
@@ -26,6 +27,15 @@ import sark
 
 import itertools
 import types
+
+class EditorAction(IntEnum):
+    renameVar = 1,
+    renameSymbol = 2,
+    listXrefs = 3,
+    addComment = 4,
+    clearComment = 5,
+    addVArg = 6,
+    removeVArg = 7,
 
 load_plugin('hexx64')
 load_plugin('hexarm64')
