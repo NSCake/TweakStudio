@@ -14,10 +14,12 @@ enum Endpoint {
     listStrings = "/strings",
     listSelrefs = "/sel_xrefs",
     listXrefs = "/xrefs",
-    
-    addComment = "/add_comment",
+    symbolForAddress = "/symbolicate",
     
     decompile = "/decompile",
+    disassemble = "/disassemble",
+    cursorExprInfo = "/expr_at_pos",
+    editorAction = "/editor_action",
     
     shutdown = "/shutdown",
 }
