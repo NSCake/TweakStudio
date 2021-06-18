@@ -70,8 +70,75 @@
                 "title": "Open dummy binary in IDA"
             },
             {
+                "command": "tweakstudio.clean-pseudocode",
+                "title": "Clean Pseudocode",
+                "when": "(resourceScheme == ida || resourceScheme == hopper) && editorTextFocus"
+            },
+            {
+                "command": "ida.list-xrefs",
+                "title": "List xrefs (IDA)",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.rename",
+                "title": "Rename (IDA)",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
                 "command": "ida.add-comment",
-                "title": "Add a comment (IDA)",
+                "title": "Add/edit comment (IDA)",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.clear-comment",
+                "title": "Remove comment (IDA)",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.add-varg",
+                "title": "Add one variadic argument (IDA)",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.del-varg",
+                "title": "Remove one variadic argument",
+                "when": "resourceScheme == ida && editorTextFocus"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "tweakstudio.clean-pseudocode",
+                "key": "p",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.list-xrefs",
+                "key": "x",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.rename",
+                "key": "n",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.add-comment",
+                "key": "c",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.clear-comment",
+                "key": "r",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.add-varg",
+                "key": "=",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "ida.del-varg",
+                "key": "-",
                 "when": "resourceScheme == ida && editorTextFocus"
             }
         ],
