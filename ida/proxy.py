@@ -488,16 +488,8 @@ class PerformEditorAction:
             name = args['name']
             clear = args['clear']
             
-            # SOS
-            mark_cfunc_dirty(funcAddr)
-            clear_cached_cfuncs()
-            
-            cfunc = decompile(funcAddr) # type: cfuncptr_t
-            
-            # citem = cfunc.treeitems[itemIdx]
-            # lvar = cfunc.lvars[citem.cexpr.v.idx]
-            
             window = open_pseudocode(funcAddr, False) # type: vdui_t
+            cfunc = decompile(funcAddr) # type: cfuncptr_t
             return window.rename_lvar(cfunc.lvars[itemIdx], name.encode("utf-8"), not clear)
         
         else:

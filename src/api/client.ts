@@ -263,7 +263,7 @@ export class IDAClient extends APIClient {
      */
     renameLvar(funcAddr: number, idx: number, newName?: string): Promise<boolean> {
         return this.post(Endpoint.editorAction, { action: EditorAction.renameVar, args: {
-            funcAddr: funcAddr, idx: idx, name: newName, clear: newName === undefined
+            funcAddr: funcAddr, idx: idx, name: newName, clear: !newName?.length
         }});
     }
     
