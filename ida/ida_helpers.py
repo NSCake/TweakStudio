@@ -16,32 +16,26 @@ from idaapi import *
 from idc import *
 import sark
 
-jsonTypes = [str, int, float, bool, long]
 collections = [dict, list, itertools.imap, types.GeneratorType]
 nonListLists = [itertools.imap, types.GeneratorType]
 excluded = [ida_funcs.func_t]
 
-def decomp(addr):
-    # Decompile this function
-    cfunc = decompile(addr) # type: cfuncptr_t
-    psc = cfunc.pseudocode # type: strvec_t
-    return (cfunc, psc)
 
 def safe_getattr(obj, key):
+    """`getattr()` without crashing."""
     try:
         return getattr(obj, key)
     except:
         return None
 
 def reflect(obj):
+    """For debugging only. Reflect an object into a dictionary."""
     if obj is None:
         return None
-    
-    # if isinstance(obj, Generator)
         
     cls = type(obj)
     
-    if cls in jsonTypes:
+    if cls in [str, int, float, bool, long]:
         return obj
     
     if cls in collections:
@@ -62,15 +56,18 @@ def reflect(obj):
     
     return props if props != {} else str(cls)
 
-def segment_containsLine(self, line):
-    return (line.startEA >= self.startEA) and (line.startEA < self.endEA)
 
-def function_containsAddress(self, addr):
-    return (addr >= self.startEA) and (addr < self.endEA)
-    
+def decomp(addr):
+    """Return the `cfunc_t` and its pseudocode as a tuple for a given address"""
+    # Decompile this function
+    cfunc = decompile(addr) # type: cfuncptr_t
+    psc = cfunc.pseudocode # type: strvec_t
+    return (cfunc, psc)
+
 def citem_by_pos(psc, lineno, col):
     """
-    Return the ctree item index corresponding to a zero-based (line, column) position.
+    Return the `citem_t` index corresponding to a zero-based (line, column) position.
+    This number is an index into `cfuncptr_t.treeitems`
     """
     
     if lineno >= psc.size():
@@ -134,35 +131,51 @@ def citem_by_pos(psc, lineno, col):
     # Impossible!
     raise Exception("Fatal error in citem_by_pos(): (c: " + str(c) + ", col: " + str(col) + ")")
 
+def citemData(funcAddr):
+    """
+    Return various information about the citems in a given function.
+    This includes:
+    - the `cfuncptr_t` itself
+    - a map of line numbers to `citem_t`'s for that line
+    - a map of `citem_t` indexes (in `cfuncptr_t.treeitems`) to line numbers
+    - a list of pseudocode lines with color tags removed
+    
+    `cfunc, linesToCItems, citemsToLines, codeLines = ...`
+    """
+    # Decompile this function
+    cfunc = decompile(funcAddr) # type: cfuncptr_t
+    psc = cfunc.pseudocode # type: strvec_t
+    
+    # Map...
+    
+    # Line numbers to groups of citems per line
+    linesToCItems = {} # type: dict[int, list[citem_t]]
+    for lineNumber in range(psc.size()):
+        lineText = psc[lineNumber].line
+        # Parse out citem indexes from the line's tags
+        linesToCItems[lineNumber] = du.lex_citem_indexes(lineText)
+    
+    # Citem indexes to line numbers
+    citemsToLines = {} # type: dict[int, int]
+    for lineno, citems in linesToCItems.items():
+        for citemIdx in citems:
+            citemsToLines[citemIdx] = lineno
+    
+    # Line numbers (1-indexed) to line content
+    codeLines = {} # type: dict[int, str]
+    for idx, sline in enumerate(psc):
+        # tag_remove removes the color codes
+        codeLines[idx + 1] = tag_remove(sline.line)
+    
+    return (cfunc, linesToCItems, citemsToLines, codeLines)
+
 def pscDataForAddress(addr):
+    """Return snippet-like pseudocode data for a given address."""
     # Iterate over all functions until we find the one containing this address
     allfuncs = sark.Segment(name='__text').functions
     for func in allfuncs:
         if func.containsAddress(addr):
-            # Decompile this function
-            cfunc = decompile(func.startEA) # type: cfuncptr_t
-            psc = cfunc.pseudocode # type: strvec_t
-            
-            # Map...
-            
-            # Line numbers to groups of citems per line
-            linesToCItems = {}
-            for lineNumber in range(psc.size()):
-                lineText = psc[lineNumber].line
-                # Parse out citem indexes from the line's tags
-                linesToCItems[lineNumber] = du.lex_citem_indexes(lineText)
-            
-            # Citem indexes to line numbers
-            citemsToLines = {}
-            for lineno, citems in linesToCItems.items():
-                for citemIdx in citems:
-                    citemsToLines[citemIdx] = lineno
-            
-            # Line numbers (1-indexed) to line content
-            codeLines = {}
-            for idx, sline in enumerate(psc):
-                # tag_remove removes the color codes
-                codeLines[idx + 1] = tag_remove(sline.line)
+            cfunc, _, citemsToLines, codeLines = citemData(func.startEA)
 
             # Now, find the nearest line to our address
             for item in cfunc.treeitems:
@@ -180,6 +193,16 @@ def pscDataForAddress(addr):
                     })
     
     return (-1, None)
+
+# Sark extensions #
+
+def segment_containsLine(self, line):
+    # type:(sark.Segment, sark.Line) -> bool
+    return (line.startEA >= self.startEA) and (line.startEA < self.endEA)
+
+def function_containsAddress(self, addr):
+    # type:(sark.Function, int) -> bool
+    return (addr >= self.startEA) and (addr < self.endEA)
 
 sark.Segment.containsLine = segment_containsLine
 sark.Function.containsAddress = function_containsAddress    
