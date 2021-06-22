@@ -14,6 +14,7 @@
 
 import json
 import traceback
+import thread
 import http.client
 import os
 from enum import IntEnum
@@ -257,8 +258,9 @@ class Shutdown:
 
     @classmethod
     def run(cls, save):
-        save_database('', 0 if save else DBFL_KILL | DBFL_TEMP)
+        global wantsShutdown
         wantsShutdown = True
+        save_database('', 0 if save else DBFL_KILL | DBFL_TEMP)
         return {}
 
 
@@ -533,7 +535,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                     self.respond(500, None, error)
                 
                 if wantsShutdown:
-                    server.shutdown()
+                    def _shutdown():
+                        server.shutdown()
+                    thread.start_new_thread(_shutdown, ())
                 
                 break
         else:
@@ -571,3 +575,4 @@ if __name__ == "__main__":
         pass
 
     server.server_close()
+    exit()
