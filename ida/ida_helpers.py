@@ -196,6 +196,36 @@ def pscDataForAddress(addr):
 
 # Sark extensions #
 
+def create_comment(cfunc, addr, comment):
+    # type:(cfuncptr_t, int, str) -> bool
+    """
+    Displays a comment at the line corresponding to the given address.
+    
+    Cannot use the function from FIDL because the version we use only
+    uses `ITP_SEMI` which will not always work for any line.
+    """
+
+    tl = treeloc_t()
+    tl.ea = addr
+    
+    # Iterate over every ITP type and try to set a comment for this line. Shiiiiii
+    itps = [ITP_SEMI, ITP_CURLY1, ITP_CURLY2, ITP_COLON, ITP_BRACE1, ITP_BRACE2, ITP_ASM, ITP_ELSE, ITP_DO, ITP_CASE]
+    for itp in itps + list(range(65)): # Range covers ITP_ARG1 to ITP_ARG64 and ITP_EMPTY(0)
+        tl.itp = itp
+        cfunc.set_user_cmt(tl, comment)
+        cfunc.save_user_cmts()
+        # Trigger string representation, else orphan comments aren't detected
+        cfunc.__str__()
+        
+        # Did it work? Stop if it worked
+        if not cfunc.has_orphan_cmts():
+            return True
+        
+        # Otherwise, remove that orphan comment and try the next one
+        cfunc.del_orphan_cmts()
+    
+    return False
+
 def segment_containsLine(self, line):
     # type:(sark.Segment, sark.Line) -> bool
     return (line.startEA >= self.startEA) and (line.startEA < self.endEA)

@@ -142,7 +142,7 @@
             },
             {
                 "command": "ida.add-comment",
-                "key": "c",
+                "key": "/",
                 "when": "resourceScheme == ida && editorTextFocus"
             },
             {

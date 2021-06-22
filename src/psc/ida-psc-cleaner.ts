@@ -16,6 +16,8 @@ function CleanIDAPseudocode(code: string): string {
         .replace(/objc_release\((\w+)\);/g, '[$1 release]') // Release
         .replace(/CFSTR\((".*")\)/g, '@$1') // NSString literals
         .replace(/\((?:unsigned )\w+( \*)?\)([^\s])/g, '$2') // Casts
+        // disabled bc VS Code auto-detects 2 spaces first and this doesn't change it
+        // .replace(/  /g, '    ') // 4 spaces,
 }
 
 export default CleanIDAPseudocode;

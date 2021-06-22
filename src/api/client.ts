@@ -23,9 +23,11 @@ export type Disassembler = 'ida' | 'hopper';
 
 export type CodeLine = {
     funcAddr: number;
+    /** Zero-based line number */
     lineno: number;
 };
 export type CursorPosition = CodeLine & {
+    /** Zero-based column index */
     col: number;
 };
 

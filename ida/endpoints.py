@@ -251,19 +251,24 @@ class PerformEditorAction:
             return None
         
         if action == EditorAction.addComment:
-            return False
             funcAddr = args['funcAddr']
-            itemIdx = args['idx']
-            name = args['name']
-            clear = args['clear']
+            lineno = args['line']
+            comment = args['comment']
             
-            window = open_pseudocode(funcAddr, False) # type: vdui_t
-            cfunc = decompile(funcAddr) # type: cfuncptr_t
-            tl = treeloc_t()
-            tl.ea = ea
-            tl.itp = ITP_SEMI
-            cfunc.set_user_cmt(tl, "Test comment")
-            cfunc.save_user_cmts()
+            # Cannot comment function itself
+            if lineno == 0:
+                return False
+            
+            cfunc, linesToCItems, _, _ = ida.citemData(funcAddr)
+            
+            lineItems = linesToCItems[lineno]
+            if lineItems.count > 0: # Some lines have no tree items
+                lastCItemIdx = lineItems.pop()
+                lineEA = cfunc.treeitems[lastCItemIdx].ea
+                
+                return ida.create_comment(cfunc, lineEA, comment.encode("utf-8"))
+            
+            return False
             
         elif action == EditorAction.renameVar:
             # lineno = args.line

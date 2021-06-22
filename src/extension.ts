@@ -119,13 +119,13 @@ export function activate(context: vscode.ExtensionContext) {
             let token: IDATokenInfo = await ida.getTokenInfoAtPosition(pos);
             
             if (ida.canPerformActionOnToken(EditorAction.addComment, token.type)) {
-                window.showInformationMessage("Data: " + JSON.stringify(token.data));
-                return;
                 // Prompt for input
                 const comment = await window.showInputBox({ prompt: "Add/edit a comment" });
                 // Submit the comment
-                DocumentManager.shared.activeClient.addComment(pos, comment);
-                // TODO: refresh document?
+                console.log(`Adding comment to line ${pos.lineno}`);
+                await DocumentManager.shared.activeClient.addComment(pos, comment);
+                console.log('Requesting new pseudocode...');
+                DocumentManager.shared.onDidChangeEmitter.fire(DocumentManager.shared.activeURI);
             }
         });
     });
