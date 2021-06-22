@@ -1,7 +1,7 @@
 {
     "name": "tweak-studio",
     "displayName": "Tweak Studio",
-    "description": "A VS Code frontend for IDA and Hopper, designed for Objc binaries",
+    "description": "An all-in-one extension for enhancing tweak development productivity.",
     "version": "0.0.1",
     "publisher": "NSCake",
     "engines": {
@@ -29,7 +29,7 @@
             "activitybar": [
                 {
                     "id": "tweakstudio",
-                    "title": "Tweak Studio",
+                    "title": "Tweak Studio: Decompiler",
                     "icon": "media/dep.svg"
                 }
             ]
