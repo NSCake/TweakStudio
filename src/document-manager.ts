@@ -8,14 +8,15 @@
 
 import * as VSCode from 'vscode';
 import { InputBoxOptions, window, workspace } from 'vscode';
-import APIClient, { CursorPosition } from './api/client';
+import APIClient, { CursorPosition, Disassembler } from './api/client';
 import HopperClient from './api/hopper';
-import { Procedure } from './api/model';
+import { Procedure, REDocument } from './api/model';
 import DisassemblerBootstrap from './bootstrap/bootstrap';
 import HopperBootstrap from './bootstrap/hopper';
 import CleanIDAPseudocode from './psc/ida-psc-cleaner';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
+import { OpenDocumentsProvider } from './views/open-documents';
 import { ProceduresProvider } from './views/procs';
 import { SelectorsProvider } from './views/selectors';
 import { StringsProvider } from './views/strings';
@@ -23,8 +24,8 @@ import { StringsProvider } from './views/strings';
 type AnyProvider = BaseProvider<any>;
 
 export interface DisassemblerFamily {
-    scheme: string;
-    client: new(scheme: string, port: number) => APIClient;
+    scheme: Disassembler;
+    client: new(scheme: string, port: number, file: string) => APIClient;
     bootstrap: DisassemblerBootstrap;
 }
 
@@ -38,14 +39,23 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         return this._activeClient;
     }
     
+    public get allDocuments(): REDocument[] {
+        return this.clients.map(c => c.document);
+    }
+    
     // hooksProvider = new HooksProvider();
+    private docsProvider = new OpenDocumentsProvider();
     private procsProvider = new ProceduresProvider();
     private selectorsProvider = new SelectorsProvider();
     private stringsProvider = new StringsProvider();
     
     private get allProviders(): AnyProvider[] {
         return [
-            /* this.hooksProvider, */ this.procsProvider, this.selectorsProvider, this.stringsProvider
+            /* this.hooksProvider, */
+            this.docsProvider,
+            this.procsProvider,
+            this.selectorsProvider,
+            this.stringsProvider
         ];
     }
     
@@ -55,6 +65,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     
     public registerViews() {
         // window.registerTreeDataProvider('hooks', this.hooksProvider);
+        window.registerTreeDataProvider('open-documents', this.docsProvider);
         window.registerTreeDataProvider('procs', this.procsProvider);
         window.registerTreeDataProvider('selectors', this.selectorsProvider);
         window.registerTreeDataProvider('strings', this.stringsProvider);
@@ -157,7 +168,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
 
             // Bootstrap selected file in Hopper
             const port = await family.bootstrap.openFile(path);
-            const client = new family.client(family.scheme, port);
+            const client = new family.client(family.scheme, port, path);
             this.addClient(client, true);
         } catch (error) {
             window.showErrorMessage(error.message);
@@ -166,13 +177,36 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     
     private addClient(client: APIClient, activate: boolean) {
         this.clients.push(client);
+        // Update documents list in sidebar
+        this.docsProvider.refresh();
         
         if (activate) {
             this.switchToClient(client);            
         }
     }
     
-    public switchToClient(client: APIClient) {
+    public async closeDocument(doc: REDocument, save: boolean): Promise<void> {
+        // Search for the client associated with this document
+        for (const client of this.clients.filter(c => c.scheme == doc.family)) {
+            if (doc.path == client.filepath) {
+                
+                // Remove the document prior to closing
+                this.clients = this.clients.filter(c => c !== client);
+                
+                // If it was the active client, then switch to the first one
+                if (client == this.activeClient && this.clients.length) {
+                    this.switchToClient(this.clients[0]);
+                } else if (!this.clients.length) {
+                    this.switchToClient(undefined);
+                }
+                
+                // Actually close the client
+                return client.shutdown(save);
+            }
+        }
+    }
+    
+    public switchToClient(client: APIClient | undefined) {
         this._activeClient = client;
 
         for (const provider of this.allProviders) {

@@ -19,6 +19,12 @@
     ],
     "main": "./out/src/extension",
     "contributes": {
+        "viewsWelcome": [
+            {
+                "view": "open-documents",
+                "contents": "Open a binary or existing project to get started.\n[Open in IDA](command:ida.open)\n[Open in Hopper](command:hopper.open)"
+            }
+        ],
         "viewsContainers": {
             "activitybar": [
                 {
@@ -31,8 +37,8 @@
         "views": {
             "tweakstudio": [
                 {
-                    "id": "segments",
-                    "name": "Segments"
+                    "id": "open-documents",
+                    "name": "Documents"
                 },
                 {
                     "id": "procs",
@@ -45,14 +51,27 @@
                 {
                     "id": "strings",
                     "name": "Strings"
-                },
+                }
+            ]
+        },
+        "menus": {
+            "view/title": [
+            ],
+            "view/item/context": [
                 {
-                    "id": "hooks",
-                    "name": "Hooks"
+                    "command": "tweakstudio.close-document",
+                    "when": "view == open-documents",
+                    "group": "inline"
                 }
             ]
         },
         "commands": [
+            {
+                "command": "tweakstudio.close-document",
+                "title": "Close Document",
+                "icon": "$(close)",
+                "when": "false"
+            },
             {
                 "command": "hopper.open",
                 "title": "Open Binary or Document in Hopper"

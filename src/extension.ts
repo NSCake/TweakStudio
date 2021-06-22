@@ -12,7 +12,7 @@ import { window, workspace, commands, Uri } from 'vscode';
 import { EditorAction, IDAClient } from './api/client';
 import HopperClient from './api/hopper';
 import IDATokenType, { IDATokenInfo } from './api/ida';
-import { Procedure, Xref } from './api/model';
+import { Procedure, REDocument, Xref } from './api/model';
 import HopperBootstrap from './bootstrap/hopper';
 import IdaBootstrap from './bootstrap/ida';
 import DocumentManager, { DisassemblerFamily } from './document-manager';
@@ -60,6 +60,11 @@ export function activate(context: vscode.ExtensionContext) {
     });
     registerCommand('ida.open', context, async () => {
         DocumentManager.shared.promptToStartNewClient(IDAFamily);
+    });
+    
+    // Close a document
+    registerCommand('tweakstudio.close-document', context, async (doc: REDocument) => {
+        DocumentManager.shared.closeDocument(doc, false);
     });
     
     // For debugging, quickly open a dummy binary

@@ -9,7 +9,7 @@
 import * as fetch from "node-fetch";
 import Endpoint from "./endpoints";
 import { hostname } from "os";
-import { Symbol, Segment, Procedure, String, Selector, Xref } from "./model";
+import { Symbol, Segment, Procedure, String, Selector, Xref, REDocument } from "./model";
 import { window } from "vscode";
 import IDATokenType, { IDATokenInfo } from "./ida";
 import HopperClient from "./hopper";
@@ -18,6 +18,8 @@ type ProxyResponse<T> = { data: T }
 type ProxyErrorResponse = { data: null, error: string };
 type LabelData = { label: string, address: number, segment: string };
 type ProcData = LabelData & { decl: string };
+
+export type Disassembler = 'ida' | 'hopper';
 
 export type CodeLine = {
     funcAddr: number;
@@ -67,14 +69,18 @@ export interface IIDAClient {
 abstract class APIClient {
     protected port: number;
     protected baseURL: string;
-    /** `ida` or `hopper` */
-    public scheme: string;
+    public scheme: Disassembler;
+    public filepath: string;
+    public document: REDocument;
 
-    constructor(scheme: string, port: number) {
+    constructor(scheme: Disassembler, port: number, file: string) {
         this.port = port;
         this.scheme = scheme;
+        this.filepath = file;
         // this.baseURL = `http://localhost:${port}`;
         this.baseURL = `http://localhost.charlesproxy.com:${port}`;
+        
+        this.document = new REDocument(file, scheme);
     }
 
     get id(): string {

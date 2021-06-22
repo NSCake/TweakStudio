@@ -7,6 +7,22 @@
 //
 
 import * as vscode from 'vscode';
+import { Disassembler } from './client';
+
+export class REDocument extends vscode.TreeItem {
+    readonly filename: string;
+    
+    constructor(readonly path: string, readonly family: Disassembler) {
+        super(path.split('/').pop()); // Pass in filename as label
+        this.filename = this.label as string;
+        
+        this.command = {
+            command: 'tweakstudio.change-document',
+            title: 'Switch to a different document',
+            arguments: [this.family, this.path]
+        }
+    }
+}
 
 export class Segment extends vscode.TreeItem {
     constructor(readonly name: string) {
