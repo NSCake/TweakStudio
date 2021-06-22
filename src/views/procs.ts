@@ -10,14 +10,7 @@ import { TreeItem, ProviderResult } from 'vscode';
 import { Procedure } from '../api/model';
 import BaseProvider from './base-provider';
 
-export class ProceduresProvider extends BaseProvider<Procedure> {
-    // private _onDidChangeTreeData: EventEmitter<Symbol | undefined | null | void> = new EventEmitter<Symbol | undefined | null | void>();
-    // readonly onDidChangeTreeData: Event<Symbol | undefined | null | void> = this._onDidChangeTreeData.event;
-
-    // refresh(): void {
-    //     this._onDidChangeTreeData.fire();
-    // }
-    
+export class ProceduresProvider extends BaseProvider<Procedure> {    
     getTreeItem(element: Procedure): TreeItem | Thenable<TreeItem> {
         return element;
     }
