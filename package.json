@@ -4,8 +4,12 @@
     "description": "An all-in-one extension for enhancing tweak development productivity.",
     "version": "0.0.1",
     "publisher": "NSCake",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/NSCake/TweakStudio.git"
+    },
     "engines": {
-        "vscode": "^1.14.0"
+        "vscode": "^1.53.0"
     },
     "categories": [
         "Other"
@@ -221,9 +225,9 @@
         ]
     },
     "scripts": {
+        "package": "vsce package",
         "vscode:prepublish": "tsc -p ./",
         "compile": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install",
         "test": "node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
