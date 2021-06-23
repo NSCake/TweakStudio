@@ -8,3 +8,4 @@ node_modules
 *.til
 *.pyc
 *.vsix
+/hopper/hopper_api.py
