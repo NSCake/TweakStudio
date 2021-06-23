@@ -21,6 +21,7 @@ enum Endpoint {
     cursorExprInfo = "/expr_at_pos",
     editorAction = "/editor_action",
     
+    save = "/save",
     shutdown = "/shutdown",
 }
 

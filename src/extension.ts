@@ -55,6 +55,11 @@ export function activate(context: vscode.ExtensionContext) {
     // Register commands //
     
     // Open a new document/database/binary in Hopper or IDA
+    registerCommand('tweakstudio.open', context, async () => {
+        const choices = { 'Hopper': 'hopper.open', 'IDA Pro': 'ida.open' };
+        const choice = await window.showQuickPick(Object.keys(choices), { canPickMany: false });
+        commands.executeCommand(choices[choice]);
+    });
     registerCommand('hopper.open', context, async () => {
         DocumentManager.shared.promptToStartNewClient(HopperFamily);
     });
@@ -77,12 +82,15 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Open a pseudocode document
     registerCommand('hopper.view-pseudocode', context, async (path: string, lineno?: number) => {
-        DocumentManager.shared.showDocument(Uri.parse('hopper:' + path), lineno);
+        // `path` already contains information about which client to use
+        const port = DocumentManager.shared.activeClient.id;
+        const uri = Uri.parse(path).with({ scheme: 'hopper', authority: port });
+        DocumentManager.shared.showDocument(uri, lineno);
     });
     registerCommand('ida.view-pseudocode', context, async (path: string, lineno?: number) => {
-        // DocumentManager.shared.switchToClient()
+        // `path` already contains information about which client to use
         const port = DocumentManager.shared.activeClient.id;
-        const uri = Uri.parse('ida:' + path).with({ query: port });
+        const uri = Uri.parse(path).with({ scheme: 'ida', authority: port });
         DocumentManager.shared.showDocument(uri, lineno);
     });
     
@@ -155,6 +163,26 @@ export function activate(context: vscode.ExtensionContext) {
                 });
             }
         })
+    });
+    
+    // Save a document
+    registerCommand('tweakstudio.save-document', context, async (doc: REDocument) => {
+        DocumentManager.shared.saveDocument(doc, doc.defaultSaveAs);
+    });
+    registerCommand('tweakstudio.save-as-document', context, async (doc: REDocument) => {
+        const uri = await window.showSaveDialog({
+            title: `Save ${doc.filename} as…`,
+            defaultUri: vscode.Uri.file(doc.defaultSaveAs)
+        });
+        
+        if (uri) {
+            DocumentManager.shared.saveDocument(doc, uri.fsPath);
+        }
+    });
+    
+    // Switch to a new client
+    registerCommand('tweakstudio.activate-document', context, async (doc: REDocument) => {
+        DocumentManager.shared.activateDocument(doc);
     });
 }
 

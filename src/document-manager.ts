@@ -185,30 +185,61 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         }
     }
     
-    public async closeDocument(doc: REDocument, save: boolean): Promise<void> {
-        // Search for the client associated with this document
+    private clientForREDocument(doc: REDocument): APIClient | undefined {
         for (const client of this.clients.filter(c => c.scheme == doc.family)) {
             if (doc.path == client.filepath) {
-                
-                // Remove the document prior to closing
-                this.clients = this.clients.filter(c => c !== client);
-                
-                // If it was the active client, then switch to the first one
-                if (client == this.activeClient && this.clients.length) {
-                    this.switchToClient(this.clients[0]);
-                } else if (!this.clients.length) {
-                    this.switchToClient(undefined);
-                }
-                
-                // Actually close the client
-                return client.shutdown(save);
+                return client;
             }
+        }
+        
+        return undefined;
+    }
+    
+    public activateDocument(doc: REDocument) {
+        const client = this.clientForREDocument(doc);
+        if (client) {
+            // We don't pass undefined here even though it is accepted,
+            // because passing undefined is "de-selecting" a client,
+            // and we don't want to do that: we want to select the client
+            // that is associated with this document iff it exists.
+            this.switchToClient(client);
+        }
+    }
+    
+    public async saveDocument(doc: REDocument, as: string): Promise<void> {
+        await this.clientForREDocument(doc)?.save(as);
+        this.docsProvider.refresh();
+    }
+    
+    public async closeDocument(doc: REDocument, save: boolean): Promise<void> {
+        const client = this.clientForREDocument(doc);
+        if (client) {
+            // Remove the document prior to closing
+            this.clients = this.clients.filter(c => c !== client);
+            
+            // If it was the active client, then switch to the first one
+            if (client == this.activeClient && this.clients.length) {
+                this.switchToClient(this.clients[0]);
+            } else if (!this.clients.length) {
+                this.switchToClient(undefined);
+            }
+            
+            // Actually close the client
+            return client.shutdown(save);
         }
     }
     
     public switchToClient(client: APIClient | undefined) {
+        // Mark old document inactive
+        if (this.activeClient) {
+            this.activeClient.document.active = false;
+        }
+        
+        // Mark new client active
         this._activeClient = client;
+        client.document.active = true;
 
+        // Update client across providers
         for (const provider of this.allProviders) {
             provider.client = client;
         }
@@ -233,9 +264,9 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     async provideTextDocumentContent(uri: VSCode.Uri): Promise<string> {
         const scheme = uri.scheme;
         const parts = uri.path.split('/');
-        // const segment = parts[0];
-        const address = parseInt(parts[1]);
-        const id = uri.query;
+        // const segment = parts[1];
+        const address = parseInt(parts[2]);
+        const id = uri.authority;
         const code = await this.clientWithID(id)?.decompileProcedure(/* segment, */ address);
         console.log(`Did decompile ${scheme} function at ${address}`)
         

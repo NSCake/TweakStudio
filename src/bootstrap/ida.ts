@@ -92,7 +92,7 @@ export default class IdaBootstrap {
     
     /**
      * Start a new IDA instance with the given path.
-     * @param path A path to a .hop document or an executable file.
+     * @param path A path to a .i64 document or an executable file.
      * @return The port associated with the new IDA instance to pull data from.
      */
     static async openFile(path: string): Promise<number> {

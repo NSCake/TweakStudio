@@ -56,10 +56,25 @@
         },
         "menus": {
             "view/title": [
+                {
+                    "command": "tweakstudio.open",
+                    "when": "view == open-documents",
+                    "group": "navigation"
+                }
             ],
             "view/item/context": [
                 {
                     "command": "tweakstudio.close-document",
+                    "when": "view == open-documents",
+                    "group": "inline"
+                },
+                {
+                    "command": "tweakstudio.save-document",
+                    "when": "view == open-documents",
+                    "group": "inline"
+                },
+                {
+                    "command": "tweakstudio.save-as-document",
                     "when": "view == open-documents",
                     "group": "inline"
                 }
@@ -70,6 +85,23 @@
                 "command": "tweakstudio.close-document",
                 "title": "Close Document",
                 "icon": "$(close)",
+                "when": "false"
+            },
+            {
+                "command": "tweakstudio.save-document",
+                "title": "Save Document",
+                "icon": "$(save)",
+                "when": "false"
+            },
+            {
+                "command": "tweakstudio.save-as-document",
+                "title": "Save Document As…",
+                "icon": "$(save-as)",
+                "when": "false"
+            },
+            {
+                "command": "tweakstudio.activate-document",
+                "title": "Switch to Document",
                 "when": "false"
             },
             {
@@ -87,6 +119,11 @@
             {
                 "command": "ida.open-test",
                 "title": "Open dummy binary in IDA"
+            },
+            {
+                "command": "tweakstudio.open",
+                "title": "Open Binary or Project",
+                "icon": "$(folder-opened)"
             },
             {
                 "command": "tweakstudio.clean-pseudocode",

@@ -11,15 +11,47 @@ import { Disassembler } from './client';
 
 export class REDocument extends vscode.TreeItem {
     readonly filename: string;
+    readonly directory: string;
+    readonly isProject: boolean;
+    
+    set active(active: boolean) {
+        if (active) {
+            this.label = `⭑ ${this.filename} (${this.directory})`;
+        } else {
+            this.label = `${this.filename} (${this.directory})`
+        }
+    }
+    
+    private get saveExtension(): 'i64' | 'hop' {
+        if (this.family == 'ida') {
+            return 'i64';
+        }
+        
+        return 'hop';
+    }
+    
+    get defaultSaveAs(): string {
+        if (this.isProject) {
+            return this.path;
+        }
+        
+        return `${this.path}.${this.saveExtension}`;
+    }
     
     constructor(readonly path: string, readonly family: Disassembler) {
-        super(path.split('/').pop()); // Pass in filename as label
-        this.filename = this.label as string;
+        super('');
+        this.isProject = path.endsWith('.i64') || path.endsWith('.hop');
+        
+        let folder = path.split('/'); ;
+        this.filename = folder.pop();
+        this.directory = folder.join('/');
+        
+        this.active = false;
         
         this.command = {
-            command: 'tweakstudio.change-document',
-            title: 'Switch to a different document',
-            arguments: [this.family, this.path]
+            command: 'tweakstudio.activate-document',
+            title: 'Switch to this document',
+            arguments: [this]
         }
     }
 }
@@ -114,10 +146,10 @@ export class Procedure extends Symbol {
     
     static parseURI(uri: vscode.Uri): { segment: string, addr: number, name: string } | undefined {
         const components = uri.path.split('/');
-        if (components.length != 3) {
+        if (components.length != 4) {
             return undefined;
         }
         
-        return { segment: components[0], addr: parseInt(components[1]), name: components[2] };
+        return { segment: components[1], addr: parseInt(components[2]), name: components[3] };
     }
 }

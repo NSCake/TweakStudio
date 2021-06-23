@@ -231,7 +231,6 @@ abstract class APIClient {
     
     // Editor actions //
     
-    
     canPerformActionOnToken(action: EditorAction, type: IDATokenType): boolean {
         switch (action) {
             case EditorAction.renameVar: return type == IDATokenType.variable;
@@ -251,7 +250,16 @@ abstract class APIClient {
         }});
     }
     
-    // Shutdown //
+    // Document management //
+    
+    async save(as?: string): Promise<void> {
+        await this.post(Endpoint.save, { outfile: as });
+        
+        // Update the document to reflect its new path
+        if (!this.document.isProject) {
+            this.document = new REDocument(as ?? this.document.defaultSaveAs, this.scheme);
+        }
+    }
     
     shutdown(saveOrNot: boolean = false): Promise<void> {
         return this.post(Endpoint.shutdown, { save: saveOrNot });

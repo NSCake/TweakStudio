@@ -32,6 +32,15 @@ class Shutdown:
         return {}
 
 @Endpoint
+class Save:
+    PATH = "/save"
+    
+    @classmethod
+    def run(cls, outfile):
+        save_database(outfile.encode("utf-8") if outfile else '', 0)
+        return {}
+
+@Endpoint
 class ListSegments:
     PATH = "/segments"
 
