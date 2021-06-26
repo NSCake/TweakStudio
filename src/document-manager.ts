@@ -237,7 +237,9 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         
         // Mark new client active
         this._activeClient = client;
-        client.document.active = true;
+        if (client) {
+            client.document.active = true;
+        }
 
         // Update client across providers
         for (const provider of this.allProviders) {
