@@ -69,7 +69,7 @@ export default class IdaBootstrap {
     }
     
     private static async commandToOpenFile(path: string): Promise<string> {
-        if (path.endsWith('.i64')) {
+        if (path.endsWith('.i64') || path.endsWith('.idb')) {
             return this.openDatabaseCommand(path);
         }
         
