@@ -14,6 +14,7 @@ import { REDocument, Xref } from './api/model';
 import HopperBootstrap from "./bootstrap/hopper";
 import IdaBootstrap from "./bootstrap/ida";
 import DocumentManager, { DisassemblerFamily } from "./document-manager";
+import { Util } from "./util";
 
 function cmd(name: string) {
     return function(type: Commands, propertyKey: string, descriptor: PropertyDescriptor) {
@@ -43,22 +44,16 @@ export class Commands {
         }
     }
     
-    showXrefPicker(refs: Xref[]) {
-        const quickPick = window.createQuickPick();
-        quickPick.items = refs;
-        quickPick.onDidChangeSelection((selection: Xref[]) => {
-            const cmd = selection[0].action;
-            commands.executeCommand(cmd.command, ...cmd.arguments);
-        });
-        quickPick.onDidHide(() => quickPick.dispose());
-        quickPick.show();
+    async showXrefPicker(refs: Xref[]) {
+        const cmd = (await Util.pickFrom(refs)).action;
+        commands.executeCommand(cmd.command, ...cmd.arguments);
     }
     
     // Open a new document/database/binary in Hopper or IDA
     @cmd('tweakstudio.open')
     async openAnything() {
-        const choices = { 'Hopper': 'hopper.open', 'IDA Pro': 'ida.open' };
-        const choice = await window.showQuickPick(Object.keys(choices), { canPickMany: false });
+        const choices = { 'IDA Pro': 'ida.open', 'Hopper': 'hopper.open' };
+        const choice = await Util.pickString(Object.keys(choices));
         commands.executeCommand(choices[choice]);
     }
     @cmd('hopper.open') 
