@@ -10,11 +10,11 @@ import { window } from 'vscode';
 import { spawn, exec } from 'child_process';
 import * as Express from 'express';
 import * as fs from 'fs';
+import { Util } from '../util';
 
 interface IDAFlags {
     overwrite?: boolean, // Defaults to NO
     slice?: number, // undefined if not FAT
-    
 }
 
 export default class IdaBootstrap {
@@ -73,7 +73,16 @@ export default class IdaBootstrap {
             return this.openDatabaseCommand(path);
         }
         
-        return this.openBinaryCommand(path, { overwrite: true, slice: 3 }); // TODO: choose slice with otool
+        // List architectures
+        const archs = await Util.archsForFile(path);
+        if (archs.length > 1) {
+            // Case: FAT binary, must choose arch
+            const choice = await Util.pickString(archs);
+            return this.openBinaryCommand(path, { overwrite: true, slice: archs.indexOf(choice) });
+        } else {
+            // Case: non-FAT binary, do not choose arch
+            return this.openBinaryCommand(path, { overwrite: true });
+        }
     }
     
     private static openDatabaseCommand(db: string): string {
@@ -96,6 +105,13 @@ export default class IdaBootstrap {
      * @return The port associated with the new IDA instance to pull data from.
      */
     static async openFile(path: string): Promise<number> {
+        // Generate the command first; we will run `lipo` to determine
+        // the architecture choices and allow the user to choose one,
+        // or abort if the file is not a Mach-O and displaly an error.
+        // The error is propogated and displayed if we await this inside
+        // the promise we return below. Await it here before the promise.
+        const command = await this.commandToOpenFile(path);
+        
         return new Promise(async (resolve, reject) => {
             // Do we have a valid copy of IDA?
             if (!this.idaPath) {
@@ -116,7 +132,6 @@ export default class IdaBootstrap {
             env.EXT_PORT = port;
             
             // Start IDA, wait for callback
-            const command = await this.commandToOpenFile(path);
             window.showInformationMessage(command);
             exec(command, { env: env }, (error, stdout, stderr) => {
                 if (error) {

@@ -166,7 +166,7 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
             // Activate our view
             VSCode.commands.executeCommand('workbench.view.extension.tweakstudio');
 
-            // Bootstrap selected file in Hopper
+            // Bootstrap selected file in the chosen disassembler
             const port = await family.bootstrap.openFile(path);
             const client = new family.client(family.scheme, port, path);
             this.addClient(client, true);
