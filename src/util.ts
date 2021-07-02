@@ -7,7 +7,6 @@
 //
 
 import { exec } from "child_process";
-import { resolve } from "node:path";
 import { QuickPickItem, window } from "vscode";
 
 export class Util {
@@ -16,7 +15,9 @@ export class Util {
      * Returns a list of architecture strings (in slice order) or rejects if not a Mach-O.
      * One architecture means it is not a FAT binary.
      */
-    static archsForFile(path: string): Promise<string[]> {
+    static async archsForFile(path: string): Promise<string[]> {
+        await this.assertBinaryNotEncrypted(path);
+        
         return new Promise((resolve, reject) => {
             exec(`lipo -archs '${path}'`, (error, stdout, stderr) => {
                 if (error) {
@@ -26,6 +27,20 @@ export class Util {
                     reject(error);
                 } else {
                     resolve(stdout.replace('\n', '').split(' '));
+                }
+            });
+        });
+    }
+    
+    static assertBinaryNotEncrypted(path: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            exec(`otool -l '${path}' | grep cryptid`, (error, stdout, stderr) => {
+                if (error) {
+                    reject(error);
+                } else if (stdout.includes('cryptid 1')) {
+                    reject({ message: 'Binary is FairPlay encrypted' });
+                } else {
+                    resolve();
                 }
             });
         });
