@@ -19,6 +19,7 @@
         "onCommand:hopper.open-test",
         "onCommand:ida.open",
         "onCommand:ida.open-test",
+        "onCommand:tweakstudio.sim-binary.open",
         "onView:procs"
     ],
     "main": "./out/src/extension",
@@ -26,7 +27,7 @@
         "viewsWelcome": [
             {
                 "view": "open-documents",
-                "contents": "Open a binary or existing project to get started.\n[Open in IDA](command:ida.open)\n[Open in Hopper](command:hopper.open)"
+                "contents": "Open a binary or existing project to get started.\n[Open in IDA](command:ida.open)\n[Open in Hopper](command:hopper.open)\n[Open a Simulator Binary](command:tweakstudio.sim-binary.open)"
             }
         ],
         "viewsContainers": {
@@ -125,6 +126,10 @@
                 "title": "Open dummy binary in IDA"
             },
             {
+                "command": "tweakstudio.sim-binary.open",
+                "title": "Open a Simulator Binary"
+            },
+            {
                 "command": "tweakstudio.open",
                 "title": "Open Binary or Project",
                 "icon": "$(folder-opened)"
@@ -219,6 +224,12 @@
                         "description": "The path to your copy of ida.app (not ida64.app)",
                         "pattern": "^/.+\\.app$",
                         "patternErrorMessage": "Must be a full path to an app without a trailing /"
+                    },
+                    "tweakstudio.simulator.binary-save-location": {
+                        "type": "string",
+                        "description": "The location to copy simulator binaries to before opening them.",
+                        "pattern": "^/.*$",
+                        "patternErrorMessage": "Must be a fully-qualfied, valid directory path"
                     }
                 }
             }

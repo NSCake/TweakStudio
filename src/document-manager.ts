@@ -6,14 +6,14 @@
 //  Copyright © 2021 Tanner Bennett. All rights reserved.
 //
 
+import * as fs from 'fs';
 import * as VSCode from 'vscode';
 import { InputBoxOptions, window, workspace } from 'vscode';
 import APIClient, { CursorPosition, Disassembler } from './api/client';
-import HopperClient from './api/hopper';
 import { Procedure, REDocument } from './api/model';
 import DisassemblerBootstrap from './bootstrap/bootstrap';
-import HopperBootstrap from './bootstrap/hopper';
 import CleanIDAPseudocode from './psc/ida-psc-cleaner';
+import { Util } from './util';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
 import { OpenDocumentsProvider } from './views/open-documents';
@@ -153,11 +153,28 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     
     // Client management //
     
-    public async promptToStartNewClient(family: DisassemblerFamily) {
+    /**
+     * Prompt the user to open a file in the given disassembler.
+     * @param family Whether to use IDA or Hopper
+     * @param startIn A folder to start the file picker in
+     * @param copyTo A folder to copy the resulting binary to before opening it
+     */
+    public async promptToStartNewClient(family: DisassemblerFamily, startIn?: string, copyTo?: string) {
         // Show file picker
-        const selection = await VSCode.window.showOpenDialog({ 'canSelectMany': false });
-        if (selection) {
-            await this.startNewClient(selection[0].path, family);
+        const selection = await Util.selectSingleFile(startIn);
+        if (copyTo) {
+            const filename = selection.fsPath.split('/').pop();
+            copyTo = `${copyTo}/${filename}`;
+            
+            fs.copyFile(selection.fsPath, copyTo, (error) => {
+                if (error) {
+                    window.showWarningMessage(error.message);
+                } else {
+                    this.startNewClient(copyTo, family);
+                }
+            });
+        } else {
+            this.startNewClient(selection.path, family);
         }
     }
     

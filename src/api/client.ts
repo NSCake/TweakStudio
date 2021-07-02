@@ -255,9 +255,10 @@ abstract class APIClient {
     async save(as?: string): Promise<void> {
         await this.post(Endpoint.save, { outfile: as });
         
-        // Update the document to reflect its new path
+        // Update file paths if we had a raw binary open before
         if (!this.document.isProject) {
             this.document = new REDocument(as ?? this.document.defaultSaveAs, this.scheme);
+            this.filepath = this.document.path;
         }
     }
     

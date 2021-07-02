@@ -6,7 +6,8 @@
 //  Copyright © 2021 Tanner Bennett. All rights reserved.
 //
 
-import { commands, ExtensionContext, InputBoxOptions, Uri, window } from "vscode"
+import { commands, ExtensionContext, InputBoxOptions, Uri, window, workspace } from "vscode"
+import * as vscode from 'vscode';
 import { EditorAction, IDAClient } from './api/client';
 import HopperClient from './api/hopper';
 import { IDATokenInfo } from './api/ida';
@@ -51,18 +52,44 @@ export class Commands {
     
     // Open a new document/database/binary in Hopper or IDA
     @cmd('tweakstudio.open')
-    async openAnything() {
+    async openAnything(startIn?: string, copyTo?: string) {
         const choices = { 'IDA Pro': 'ida.open', 'Hopper': 'hopper.open' };
         const choice = await Util.pickString(Object.keys(choices));
-        commands.executeCommand(choices[choice]);
+        commands.executeCommand(choices[choice], startIn, copyTo);
     }
     @cmd('hopper.open') 
-    openInHopper() {
-        DocumentManager.shared.promptToStartNewClient(HopperFamily);
+    openInHopper(startIn?: string, copyTo?: string) {
+        DocumentManager.shared.promptToStartNewClient(HopperFamily, startIn, copyTo);
     }
     @cmd('ida.open') 
-    openInIda() {
-        DocumentManager.shared.promptToStartNewClient(IDAFamily);
+    openInIda(startIn?: string, copyTo?: string) {
+        DocumentManager.shared.promptToStartNewClient(IDAFamily, startIn, copyTo);
+    }
+    @cmd('tweakstudio.sim-binary.open')
+    async openBinaryFromSimulator() {
+        const saveLocation = await Util.getOrPromptForPathSetting(
+            'tweakstudio.simulator.binary-save-location',
+            "Simulator binary save location not yet configured",
+            "Choose save location"
+        );
+        
+        try {
+            const developer = await Util.getDeveloperDirectory();
+            const runtimeRootComponents = [
+                developer,
+                'Platforms/iPhoneOS.platform',
+                'Library/Developer/CoreSimulator',
+                'Profiles/Runtimes/iOS.simruntime',
+                'Contents/Resources/RuntimeRoot'
+            ];
+            commands.executeCommand(
+                'tweakstudio.open',
+                runtimeRootComponents.join('/'),
+                saveLocation
+            );
+        } catch (error) {
+            window.showErrorMessage(error.message);
+        }
     }
     
     // Close a document
