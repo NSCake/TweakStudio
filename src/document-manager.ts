@@ -13,6 +13,7 @@ import APIClient, { CursorPosition, Disassembler } from './api/client';
 import { Procedure, REDocument } from './api/model';
 import DisassemblerBootstrap from './bootstrap/bootstrap';
 import CleanIDAPseudocode from './psc/ida-psc-cleaner';
+import { Status, Statusbar } from './status';
 import { Util } from './util';
 import BaseProvider from './views/base-provider';
 import { HooksProvider } from './views/hooks';
@@ -224,7 +225,11 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     }
     
     public async saveDocument(doc: REDocument, as: string): Promise<void> {
-        await this.clientForREDocument(doc)?.save(as);
+        Statusbar.push(Status.saving);
+        
+        await this.clientForREDocument(doc)?.save(as)
+            .finally(Statusbar.popper(Status.saving));
+            
         this.docsProvider.refresh();
     }
     
@@ -242,7 +247,9 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
             }
             
             // Actually close the client
-            return client.shutdown(save);
+            Statusbar.push(Status.closing);
+            return client.shutdown(save)
+                .finally(Statusbar.popper(Status.closing));
         }
     }
     
@@ -286,16 +293,18 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         // const segment = parts[1];
         const address = parseInt(parts[2]);
         const id = uri.authority;
-        const code = await this.clientWithID(id)?.decompileProcedure(/* segment, */ address);
-        console.log(`Did decompile ${scheme} function at ${address}`)
+        
+        // Push status
+        Statusbar.push(Status.decompile);
+        // Load pseudocode and pop status
+        const code = await this.clientWithID(id)?.decompileProcedure(/* segment, */ address)
+            .finally(Statusbar.popper(Status.decompile));
         
         if (this.cleanNext?.toString() == uri.toString()) {
             this.cleanNext = undefined;
             switch (scheme) {
                 case 'ida': return CleanIDAPseudocode(code);
             }
-            
-            console.log('Did clean pseudocode');
         }
         
         return code;

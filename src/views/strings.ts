@@ -6,18 +6,11 @@
 //  Copyright © 2021 Tanner Bennett. All rights reserved.
 //
 
-import { TreeItem, ProviderResult } from 'vscode';
 import { String } from '../api/model';
+import { Status } from '../status';
 import BaseProvider from './base-provider';
 
 export class StringsProvider extends BaseProvider<String> {
-    getTreeItem(element: String): TreeItem | Thenable<TreeItem> {
-        return element;
-    }
-    
-    getChildren(element?: String): ProviderResult<String[]> {
-        if (element) return [];
-        
-        return this.client?.listStrings() || [];
-    }
+    protected statusMessage = Status.loadingStrings;
+    protected reloadData = () => this.client?.listStrings();
 }

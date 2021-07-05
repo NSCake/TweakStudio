@@ -16,10 +16,40 @@ import HopperBootstrap from "./bootstrap/hopper";
 import IdaBootstrap from "./bootstrap/ida";
 import DocumentManager, { DisassemblerFamily } from "./document-manager";
 import { Util } from "./util";
+import { Status, Statusbar } from "./status";
 
-function cmd(name: string) {
+function isPromise(thing: any): thing is Promise<any> {
+    return !!thing.then;
+}
+
+function cmd(name: string, status?: string) {
     return function(type: Commands, propertyKey: string, descriptor: PropertyDescriptor) {
-        Commands.commandMap[name] = descriptor.value.bind(Commands.shared);
+        const invocation = descriptor.value.bind(Commands.shared);
+        
+        if (status) {
+            Commands.commandMap[name] = (...args: any[]) => {
+                // Begin showing status
+                Statusbar.push(status);
+                
+                // Create callback to hide status
+                const hide = () => {
+                    Statusbar.pop(status);
+                };
+                
+                // Invoke method; give method responsibility to hide status
+                const maybePromise = invocation(...args, hide);
+                
+                // Hide status ourselves if it is not a promise
+                if (!isPromise(maybePromise)) {
+                    hide();
+                }
+                
+                // Return result
+                return maybePromise;
+            };
+        } else {
+            Commands.commandMap[name] = invocation;
+        }
     }
 }
 
@@ -37,17 +67,22 @@ const IDAFamily: DisassemblerFamily = {
 
 export class Commands {
     static shared = new Commands();
+    static status: vscode.StatusBarItem
     static commandMap: { [command: string]: any } = {};
+    static commandStatusMap: { [command: string]: vscode.StatusBarItem } = {};
     
     public static init(context: ExtensionContext) {
         for (const [cmd, func] of Object.entries(Commands.commandMap)) {
             context.subscriptions.push(commands.registerCommand(cmd, func));
         }
+        for (const [cmd, status] of Object.entries(Commands.commandMap)) {
+            context.subscriptions.push(status);
+        }
     }
     
     async showXrefPicker(refs: Xref[]) {
         const cmd = (await Util.pickFrom(refs)).action;
-        commands.executeCommand(cmd.command, ...cmd.arguments);
+        return commands.executeCommand(cmd.command, ...cmd.arguments);
     }
     
     // Open a new document/database/binary in Hopper or IDA
@@ -94,7 +129,7 @@ export class Commands {
     
     // Close a document
     @cmd('tweakstudio.close-document') 
-    closeDocoument(doc: REDocument) {
+    closeDocoument(doc: REDocument, hideSpinner?: () => void) {
         DocumentManager.shared.closeDocument(doc, false);
     }
     
@@ -131,15 +166,21 @@ export class Commands {
     }
     
     // Show selrefs from selector strings
-    @cmd('ida.show-selrefs') 
-    async showSelrefs(address: number) {
-        const refs = await DocumentManager.shared.activeClient.listSelrefs(address);
+    @cmd('ida.show-selrefs', Status.selrefs) 
+    async showSelrefs(address: number, hideSpinner?: () => void) {
+        const refs = await DocumentManager.shared.activeClient
+            .listSelrefs(address)
+            .finally(hideSpinner);
+            
         this.showXrefPicker(refs);
     }
     // Show xrefs from everything else
-    @cmd('ida.show-xrefs') 
-    async showXrefs(address: number) {
-        const refs = await DocumentManager.shared.activeClient.listXrefs(address);
+    @cmd('ida.show-xrefs', Status.xrefs) 
+    async showXrefs(address: number, hideSpinner?: () => void) {
+        const refs = await DocumentManager.shared.activeClient
+            .listXrefs(address)
+            .finally(hideSpinner);
+            
         this.showXrefPicker(refs);
     }
     

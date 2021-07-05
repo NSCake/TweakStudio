@@ -10,6 +10,7 @@ import { window } from 'vscode';
 import { spawn, exec } from 'child_process';
 import * as Express from 'express';
 import * as fs from 'fs';
+import { Status, Statusbar } from '../status';
 
 export default class HopperBootstrap {
     static extensionPath: string = "";
@@ -73,6 +74,9 @@ export default class HopperBootstrap {
      * @return The port associated with the new Hopper instance to pull data from.
      */
     static async openFile(path: string): Promise<number> {
+        // Push status
+        Statusbar.push(Status.init_hopper);
+        
         return new Promise((resolve, reject) => {
             // Do we have a valid copy of Hopper?
             if (!this.hopperPath) {
@@ -100,7 +104,8 @@ export default class HopperBootstrap {
                 }
             });
             
-            return clientPort;
+            return clientPort
+                .finally(Statusbar.popper(Status.init_hopper));
         });
     }
 

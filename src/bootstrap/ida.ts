@@ -11,6 +11,7 @@ import { spawn, exec } from 'child_process';
 import * as Express from 'express';
 import * as fs from 'fs';
 import { Util } from '../util';
+import { Status, Statusbar } from '../status';
 
 interface IDAFlags {
     overwrite?: boolean, // Defaults to NO
@@ -112,6 +113,9 @@ export default class IdaBootstrap {
         // the promise we return below. Await it here before the promise.
         const command = await this.commandToOpenFile(path);
         
+        // Push status
+        Statusbar.push(Status.init_ida);
+        
         return new Promise(async (resolve, reject) => {
             // Do we have a valid copy of IDA?
             if (!this.idaPath) {
@@ -139,7 +143,8 @@ export default class IdaBootstrap {
                 }
             });
             
-            return clientPort;
+            return clientPort
+                .finally(Statusbar.popper(Status.init_ida));
         });
     }
 

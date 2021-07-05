@@ -13,6 +13,7 @@ import HopperBootstrap from './bootstrap/hopper';
 import IdaBootstrap from './bootstrap/ida';
 import { Commands } from './commands';
 import DocumentManager from './document-manager';
+import { Statusbar } from './status';
 
 function reloadSettings() {
     IdaBootstrap.setIDAPath(workspace.getConfiguration('tweakstudio.ida').get('path'));
@@ -35,6 +36,8 @@ export function activate(context: vscode.ExtensionContext) {
     
     // Register commands //
     Commands.init(context);
+    // GC status bar //
+    Statusbar.init(context);
 }
 
 export function deactivate(context: vscode.ExtensionContext) {

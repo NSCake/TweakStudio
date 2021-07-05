@@ -252,6 +252,7 @@
     },
     "dependencies": {
         "express": "^4.17.1",
+        "lazy-get-decorator": "^2.2.0",
         "node-fetch": "^2.6.1"
     }
 }
