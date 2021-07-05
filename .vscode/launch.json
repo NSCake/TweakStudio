@@ -15,7 +15,12 @@
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/src/**/*.js" ],
             "preLaunchTask": "npm",
-            "skipFiles": ["<node_internals>/**"]
+            "skipFiles": [
+                "*.js",
+                "<node_internals>/*.js",
+                "<node_internals>/**",
+                "/Applications/Code.app/Contents/Resources/app/out/**"
+            ]
         },
         {
             "name": "Launch Tests",
