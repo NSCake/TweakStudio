@@ -153,6 +153,10 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         this.onDidChangeEmitter.fire(doc.uri);
     }
     
+    public refreshActiveDocument() {
+        this.onDidChangeEmitter.fire(this.activeEditor.document.uri);
+    }
+    
     // Client management //
     
     /**

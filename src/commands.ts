@@ -192,6 +192,12 @@ export class Commands {
         DocumentManager.shared.tryCleanPseudocode();
     }
     
+    // Reload a pseudocode document
+    @cmd('tweakstudio.refresh-pseudocode')
+    refreshPseudocode() {
+        DocumentManager.shared.refreshActiveDocument();
+    }
+    
     // Show selrefs from selector strings
     @cmd('ida.show-selrefs', Status.selrefs) 
     async showSelrefs(address: number, hideSpinner?: () => void) {

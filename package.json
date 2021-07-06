@@ -151,6 +151,11 @@
                 "when": "(resourceScheme == ida || resourceScheme == hopper) && editorTextFocus"
             },
             {
+                "command": "tweakstudio.refresh-pseudocode",
+                "title": "Reload Pseudocode",
+                "when": "(resourceScheme == ida || resourceScheme == hopper) && editorTextFocus"
+            },
+            {
                 "command": "ida.list-xrefs",
                 "title": "List xrefs (IDA)",
                 "when": "resourceScheme == ida && editorTextFocus"
@@ -185,6 +190,11 @@
             {
                 "command": "tweakstudio.clean-pseudocode",
                 "key": "p",
+                "when": "resourceScheme == ida && editorTextFocus"
+            },
+            {
+                "command": "tweakstudio.refresh-pseudocode",
+                "key": "l",
                 "when": "resourceScheme == ida && editorTextFocus"
             },
             {
