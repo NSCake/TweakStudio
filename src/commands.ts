@@ -27,7 +27,7 @@ function cmd(name: string, status?: string) {
         const invocation = descriptor.value.bind(Commands.shared);
         
         if (status) {
-            Commands.commandMap[name] = (...args: any[]) => {
+            Commands.commandMap[name] = async (...args: any[]) => {
                 // Begin showing status
                 Statusbar.push(status);
                 
@@ -36,19 +36,30 @@ function cmd(name: string, status?: string) {
                     Statusbar.pop(status);
                 };
                 
-                // Invoke method; give method responsibility to hide status
-                const maybePromise = invocation(...args, hide);
-                
-                // Hide status ourselves if it is not a promise
-                if (!isPromise(maybePromise)) {
-                    hide();
+                try {
+                    // Invoke method; give method responsibility to hide status
+                    const maybePromise = invocation(...args, hide);
+                    
+                    // Hide status ourselves if it is not a promise
+                    if (!isPromise(maybePromise)) {
+                        hide();
+                        await maybePromise;
+                    }
+                    
+                    // Return result
+                    return maybePromise;
+                } catch (error) {
+                    window.showErrorMessage(error.message);
                 }
-                
-                // Return result
-                return maybePromise;
             };
         } else {
-            Commands.commandMap[name] = invocation;
+            Commands.commandMap[name] = (...args: any[]) => {
+                try {
+                    return invocation(...args);
+                } catch (error) {
+                    window.showErrorMessage(error.message);
+                }
+            };
         }
     }
 }
