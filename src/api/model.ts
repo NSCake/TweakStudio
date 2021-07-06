@@ -40,7 +40,7 @@ export class REDocument extends vscode.TreeItem {
     
     constructor(readonly path: string, readonly family: Disassembler) {
         super('');
-        this.isProject = path.endsWith('.i64') || path.endsWith('.hop');
+        this.isProject = path.match(/\.(idb|i64|hop)/) != null;
         
         let folder = path.split('/'); ;
         this.filename = folder.pop();
