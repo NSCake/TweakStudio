@@ -17,6 +17,7 @@ import traceback
 import http.client
 import os
 import http.server as https
+import idc as idc
 
 try:
     import thread
@@ -93,4 +94,4 @@ if __name__ == "__main__":
         pass
 
     server.server_close()
-    exit()
+    idc.qexit(0)
