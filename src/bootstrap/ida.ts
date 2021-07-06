@@ -7,11 +7,12 @@
 //
 
 import { window } from 'vscode';
-import { spawn, exec } from 'child_process';
+import { exec } from 'child_process';
 import * as Express from 'express';
 import * as fs from 'fs';
 import { Util } from '../util';
 import { Status, Statusbar } from '../status';
+import { ChildProcess } from 'node:child_process';
 
 interface IDAFlags {
     overwrite?: boolean, // Defaults to NO
@@ -103,9 +104,9 @@ export default class IdaBootstrap {
     /**
      * Start a new IDA instance with the given path.
      * @param path A path to a .i64 document or an executable file.
-     * @return The port associated with the new IDA instance to pull data from.
+     * @return The process and port associated with the new IDA instance to pull data from.
      */
-    static async openFile(path: string): Promise<number> {
+    static async openFile(path: string): Promise<[ChildProcess, number]> {
         // Generate the command first; we will run `lipo` to determine
         // the architecture choices and allow the user to choose one,
         // or abort if the file is not a Mach-O and displaly an error.
@@ -113,22 +114,17 @@ export default class IdaBootstrap {
         // the promise we return below. Await it here before the promise.
         const command = await this.commandToOpenFile(path);
         
+        // Do we have a valid copy of IDA?
+        if (!this.idaPath) {
+            throw { message: 'IDA not found; ensure IDA path setting is valid' };
+        }
+        
         // Push status
         Statusbar.push(Status.init_ida);
         
         return new Promise(async (resolve, reject) => {
-            // Do we have a valid copy of IDA?
-            if (!this.idaPath) {
-                reject('IDA not found; ensure IDA path setting is valid');
-                return;
-            }
-            
             // Start the callback server before we launch IDA
             const clientPort = this.serveNewClient(path);
-            
-            // Await the new client's ping so we can assign it a port
-            clientPort.then(p => resolve(p));
-            clientPort.catch(e => reject(e));
             
             // Get the port we're listening on and setup env vars
             const port = this.callbackPortForPath(path).toString();
@@ -137,14 +133,19 @@ export default class IdaBootstrap {
             
             // Start IDA, wait for callback
             window.showInformationMessage(command);
-            exec(command, { env: env }, (error, stdout, stderr) => {
+            const child = exec(command, { env: env }, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
                 }
             });
             
-            return clientPort
-                .finally(Statusbar.popper(Status.init_ida));
+            try {
+                await clientPort
+                    .then(p => resolve([child, p]))
+                    .finally(Statusbar.popper(Status.init_ida));
+            } catch (error) {
+                reject(error);
+            }
         });
     }
 

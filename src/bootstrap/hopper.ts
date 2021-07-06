@@ -7,7 +7,7 @@
 //
 
 import { window } from 'vscode';
-import { spawn, exec } from 'child_process';
+import { exec, ChildProcess } from 'child_process';
 import * as Express from 'express';
 import * as fs from 'fs';
 import { Status, Statusbar } from '../status';
@@ -73,23 +73,18 @@ export default class HopperBootstrap {
      * @param path A path to a .hop document or an executable file.
      * @return The port associated with the new Hopper instance to pull data from.
      */
-    static async openFile(path: string): Promise<number> {
+    static async openFile(path: string): Promise<[ChildProcess, number]> {
+        // Do we have a valid copy of Hopper?
+        if (!this.hopperPath) {
+            throw { message: 'Hopper not found; ensure Hopper path setting is valid' }
+        }
+        
         // Push status
         Statusbar.push(Status.init_hopper);
         
-        return new Promise((resolve, reject) => {
-            // Do we have a valid copy of Hopper?
-            if (!this.hopperPath) {
-                reject('Hopper not found; ensure Hopper path setting is valid');
-                return;
-            }
-            
+        return new Promise(async (resolve, reject) => {
             // Start the callback server before we launch Hopper
             const clientPort = this.serveNewClient(path);
-            
-            // Await the new client's ping so we can assign it a port
-            clientPort.then(p => resolve(p));
-            clientPort.catch(e => reject(e));
             
             // Get the port we're listening on and setup env vars
             const port = this.callbackPortForPath(path).toString();
@@ -98,14 +93,19 @@ export default class HopperBootstrap {
             
             // Start Hopper, wait for callback
             const command = this.binaryCommand('FAT', '--aarch64', path);
-            exec(command, { env: env }, (error, stdout, stderr) => {
+            const child = exec(command, { env: env }, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
                 }
             });
             
-            return clientPort
-                .finally(Statusbar.popper(Status.init_hopper));
+            try {
+                await clientPort
+                    .then(p => resolve([child, p]))
+                    .finally(Statusbar.popper(Status.init_hopper));
+            } catch (error) {
+                reject(error);
+            }
         });
     }
 

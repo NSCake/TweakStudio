@@ -82,6 +82,11 @@
                     "command": "tweakstudio.save-as-document",
                     "when": "view == open-documents",
                     "group": "inline"
+                },
+                {
+                    "command": "tweakstudio.delete-document",
+                    "when": "view == open-documents",
+                    "group": "inline"
                 }
             ]
         },
@@ -90,6 +95,12 @@
                 "command": "tweakstudio.close-document",
                 "title": "Close Document",
                 "icon": "$(close)",
+                "when": "false"
+            },
+            {
+                "command": "tweakstudio.delete-document",
+                "title": "Delete Document",
+                "icon": "$(trash)",
                 "when": "false"
             },
             {

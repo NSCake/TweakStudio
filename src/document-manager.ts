@@ -7,9 +7,10 @@
 //
 
 import * as fs from 'fs';
+import { promises as fsp } from 'fs';
 import * as VSCode from 'vscode';
 import { InputBoxOptions, window, workspace } from 'vscode';
-import APIClient, { CursorPosition, Disassembler } from './api/client';
+import APIClient, { APIClientConfig, CursorPosition, Disassembler, IDAClient } from './api/client';
 import { Procedure, REDocument } from './api/model';
 import DisassemblerBootstrap from './bootstrap/bootstrap';
 import CleanIDAPseudocode from './psc/ida-psc-cleaner';
@@ -26,7 +27,7 @@ type AnyProvider = BaseProvider<any>;
 
 export interface DisassemblerFamily {
     scheme: Disassembler;
-    client: new(scheme: string, port: number, file: string) => APIClient;
+    client: new(config: APIClientConfig) => APIClient;
     bootstrap: DisassemblerBootstrap;
 }
 
@@ -185,8 +186,12 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
             VSCode.commands.executeCommand('workbench.view.extension.tweakstudio');
 
             // Bootstrap selected file in the chosen disassembler
-            const port = await family.bootstrap.openFile(path);
-            const client = new family.client(family.scheme, port, path);
+            const [process, port] = await family.bootstrap.openFile(path);
+            const client = new family.client({
+                scheme: family.scheme,
+                port: port, file: path,
+                process: process
+            });
             this.addClient(client, true);
         } catch (error) {
             window.showErrorMessage(error.message);
@@ -246,10 +251,39 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
                 this.switchToClient(undefined);
             }
             
-            // Actually close the client
+            // Add an exit listener to delete files after shutdown
+            const exitPromise = new Promise((resolve, reject) => {
+                client.process.once("exit", resolve);
+                client.process.once("error", reject);
+            });
+            
+            // Push status
             Statusbar.push(Status.closing);
-            return client.shutdown(save)
+            
+            // Actually close the client
+            await client.shutdown(save);
+            
+            // Wait for process exit to avoid race condition
+            // when deleting cleanupFiles; or IDA will create
+            // the .til file again just after the document is
+            // closed, right after we delete it the first time.
+            await exitPromise
                 .finally(Statusbar.popper(Status.closing));
+            
+            // Delete leftovers, mostly just for IDA projects
+            // Wrap in a promise to erase Promise<void[]> to Promise<void>
+            return new Promise(async (resolve, reject) => {
+                await Promise.all(doc.cleanupFiles.map(fsp.unlink))
+                    .catch(reject).then(() => resolve());
+            });
+        }
+    }
+    
+    public async deleteDocument(doc: REDocument): Promise<void> {
+        await this.closeDocument(doc, false);
+        // Delete the actual database file, if any
+        if (doc.isProject) {
+            return fsp.unlink(doc.path);
         }
     }
     
@@ -276,7 +310,8 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
     }
     
     public shutdown() {
-        this.clients.forEach(c => c.shutdown());
+        // Close all documents without saving
+        this.clients.forEach(c => this.closeDocument(c.document, false));
         this._activeClient = undefined;
         this.clients = [];
     }

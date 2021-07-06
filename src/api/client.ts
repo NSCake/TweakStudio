@@ -13,6 +13,7 @@ import { Symbol, Segment, Procedure, String, Selector, Xref, REDocument } from "
 import { window } from "vscode";
 import IDATokenType, { IDATokenInfo } from "./ida";
 import HopperClient from "./hopper";
+import { ChildProcess } from "node:child_process";
 
 type ProxyResponse<T> = { data: T }
 type ProxyErrorResponse = { data: null, error: string };
@@ -68,21 +69,30 @@ export interface IIDAClient {
     getTokenTypeAtPosition(position: CursorPosition): Promise<IDATokenType>;
 }
 
+export interface APIClientConfig {
+    scheme: Disassembler;
+    port: number;
+    process: ChildProcess;
+    file: string;
+}
+
 abstract class APIClient {
     protected port: number;
     protected baseURL: string;
     public scheme: Disassembler;
     public filepath: string;
     public document: REDocument;
+    public process: ChildProcess;
 
-    constructor(scheme: Disassembler, port: number, file: string) {
-        this.port = port;
-        this.scheme = scheme;
-        this.filepath = file;
+    constructor(config: APIClientConfig) {
+        this.port = config.port;
+        this.scheme = config.scheme;
+        this.filepath = config.file;
+        this.process = config.process;
         // this.baseURL = `http://localhost:${port}`;
-        this.baseURL = `http://localhost.charlesproxy.com:${port}`;
+        this.baseURL = `http://localhost.charlesproxy.com:${this.port}`;
         
-        this.document = new REDocument(file, scheme);
+        this.document = new REDocument(config.file, config.scheme);
     }
 
     get id(): string {

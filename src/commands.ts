@@ -140,8 +140,24 @@ export class Commands {
     
     // Close a document
     @cmd('tweakstudio.close-document') 
-    closeDocoument(doc: REDocument, hideSpinner?: () => void) {
+    closeDocoument(doc: REDocument) {
         DocumentManager.shared.closeDocument(doc, false);
+    }
+    @cmd('tweakstudio.delete-document')
+    async deleteDocoument(doc: REDocument) {
+        if (doc.isProject) {
+            const trash = "I'm sure, delete it";
+            const choice = await Util.pickString(
+                [trash, "Cancel"],
+                "Are you sure you want to delete this project?",
+            );
+            
+            if (choice == trash) {
+                DocumentManager.shared.deleteDocument(doc);
+            }
+        } else {
+            window.showErrorMessage('Cannot delete unsaved project');
+        }
     }
     
     // For debugging, quickly open a dummy binary

@@ -11,10 +11,28 @@ import { QuickPickItem, Uri, window, workspace } from "vscode";
 
 export class Util {
     
+    /** Mostly just for debugging */
+    static sleep(ms): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
     static isString(value: unknown): value is string {
         return typeof value == 'string';
     }
     
+    /** Remove the last component of a string split by splitby */
+    static popLast(str: string, splitby: string): string {
+        if (!str.includes(splitby)) return str;
+        
+        const components = str.split(splitby);
+        components.pop();
+        return components.join(splitby);
+    }
+    
+    /**
+     * @param first whether to return the first element of value
+     * @return The value or a rejected promise
+     */
     static valueOrReject<T>(value: T | T[], first: boolean = false): T | Promise<T> {
         if (value) {
             if (first && Array.isArray(value) && value.length) {
@@ -48,6 +66,7 @@ export class Util {
         });
     }
     
+    /** Make sure this binary isn't fairplay encrpyted, using otool */
     static assertBinaryNotEncrypted(path: string): Promise<void> {
         return new Promise((resolve, reject) => {
             // We use `cat` to hide grep failing if no match found, while
@@ -64,6 +83,7 @@ export class Util {
         });
     }
     
+    /** Get the Xcode developer directory with xcode-select */
     static getDeveloperDirectory(): Promise<string> {
         return new Promise((resolve, reject) => {
             exec(`xcode-select -p`, (error, stdout, stderr) => {
@@ -97,8 +117,11 @@ export class Util {
     }
     
     /** Returns one choice, rejects if nothing selected */
-    static async pickString(choices: string[]): Promise<string> {
-        const choice = await window.showQuickPick(choices, { canPickMany: false });
+    static async pickString(choices: string[], placeholder?: string): Promise<string> {
+        const choice = await window.showQuickPick(choices, {
+            placeHolder: placeholder,
+            canPickMany: false
+        });
         return this.valueOrReject(choice);
     }
     
