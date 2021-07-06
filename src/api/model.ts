@@ -7,13 +7,18 @@
 //
 
 import * as vscode from 'vscode';
+import { Util } from '../util';
 import { Disassembler } from './client';
 
 export class REDocument extends vscode.TreeItem {
+    /** The name of the file, such as glibc.dylib or Uber.idb */
     readonly filename: string;
+    /** The directory the file is open in */
     readonly directory: string;
+    /** Whether the open file has yet been saved as/is a project */
     readonly isProject: boolean;
     
+    /** Make this docuemnt indicate whether it is active or not */
     set active(active: boolean) {
         if (active) {
             this.label = `⭑ ${this.filename} (${this.directory})`;
@@ -22,6 +27,7 @@ export class REDocument extends vscode.TreeItem {
         }
     }
     
+    /** The database file extension to use for this document */
     private get saveExtension(): 'i64' | 'hop' {
         if (this.family == 'ida') {
             return 'i64';
@@ -30,12 +36,23 @@ export class REDocument extends vscode.TreeItem {
         return 'hop';
     }
     
+    /** Where to save this file by default depending on whether it is a project or not */
     get defaultSaveAs(): string {
         if (this.isProject) {
             return this.path;
         }
         
         return `${this.path}.${this.saveExtension}`;
+    }
+    
+    /** Files to be deleted when the project is closed or deleted */
+    get cleanupFiles(): string[] {
+        if (this.family == 'ida') {
+            return [Util.popLast(this.filename, '.') + '.til']
+                .map(name => `${this.directory}/${name}`);
+        }
+
+        return [];
     }
     
     constructor(readonly path: string, readonly family: Disassembler) {
