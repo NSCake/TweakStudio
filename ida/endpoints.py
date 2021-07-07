@@ -129,9 +129,13 @@ class ListSelectorXRefs:
                 # Loop over each selref ref and find the pseudocode
                 for ref in refs:
                     lineno, data = ida.pscDataForAddress(ref)
-                    # Store first ref for each line number
+                    # Store only one ref for each line number
                     if data and not lineno in results:
-                        results[lineno] = data
+                        # Only store if line content contains the selector
+                        lineContent = data['lineContent']
+                        if line.bytes[0:-1] in lineContent:
+                            results[lineno] = data
+                        # TODO: return all matches in another part of the response
                 
                 return results.values()
         
