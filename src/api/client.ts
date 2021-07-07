@@ -89,8 +89,8 @@ abstract class APIClient {
         this.scheme = config.scheme;
         this.filepath = config.file;
         this.process = config.process;
-        // this.baseURL = `http://localhost:${port}`;
-        this.baseURL = `http://localhost.charlesproxy.com:${this.port}`;
+        this.baseURL = `http://localhost:${this.port}`;
+        // this.baseURL = `http://localhost.charlesproxy.com:${this.port}`;
         
         this.document = new REDocument(config.file, config.scheme);
     }
