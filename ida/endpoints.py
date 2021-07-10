@@ -88,7 +88,53 @@ class ListStrings:
     PATH = "/strings"
 
     @classmethod
-    def run(cls, segment_names):
+    def run(cls, segment_names = []):
+        if segment_names:
+            return cls.stringsInSegments(segment_names)
+        else:
+            return cls.cAndCFStrings()
+    
+    @classmethod
+    def cAndCFStrings(cls):
+        cfstrings = sark.Segment(name="__cfstring")
+        cstrings = sark.Segment(name="__cstring")
+        props = sark.Segment(name='__objc_const')
+        ivars = sark.Segment(name='__objc_ivar')
+        
+        strings = []
+        for line in cstrings.lines:
+            
+            if line.is_string:
+                skip = False
+                strAddr = line.startEA
+                segName = cstrings.name
+                
+                for xr in line.drefs_to:
+                    if cfstrings.containsEA(xr):
+                        strAddr = xr
+                        segName = cfstrings.name
+                    
+                    # Skip ivars and properties
+                    elif ivars.containsEA(xr) or props.containsEA(xr):
+                        skip = True
+                    
+                    break
+                
+                if not skip:
+                    strings.append(
+                        {
+                            "label": line.bytes[0:-1].encode('unicode_escape'),
+                            "address": strAddr,
+                            "segment": segName,
+                        }
+                    )
+                
+        return strings
+        
+        
+    @classmethod
+    def stringsInSegments(cls, segment_names):
+        # type:(list[str]) -> list
         strings = []
         for sname in segment_names:
             seg = sark.Segment(name=str(sname)) # sname is type 'unicode' here???
@@ -102,7 +148,7 @@ class ListStrings:
                             "segment": sname,
                         }
                     )
-                
+        
         return strings
 
 @Endpoint

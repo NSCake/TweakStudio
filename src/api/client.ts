@@ -209,9 +209,7 @@ abstract class APIClient {
     }
     
     listStrings(): Promise<String[]> {
-        return this.post(Endpoint.listStrings, {
-            segment_names: ['__cstring', '__cfstring']
-        }).then(this.decodeSymbols);
+        return this.post(Endpoint.listStrings).then(this.decodeSymbols);
     }
     
     listSelectors(): Promise<Selector[]> {

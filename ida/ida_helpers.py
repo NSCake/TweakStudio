@@ -226,6 +226,10 @@ def create_comment(cfunc, addr, comment):
     
     return False
 
+def segment_containsEA(self, ea):
+    # type:(sark.Segment, sark.Line) -> bool
+    return (ea >= self.startEA) and (ea < self.endEA)
+
 def segment_containsLine(self, line):
     # type:(sark.Segment, sark.Line) -> bool
     return (line.startEA >= self.startEA) and (line.startEA < self.endEA)
@@ -234,5 +238,6 @@ def function_containsAddress(self, addr):
     # type:(sark.Function, int) -> bool
     return (addr >= self.startEA) and (addr < self.endEA)
 
+sark.Segment.containsEA = segment_containsEA
 sark.Segment.containsLine = segment_containsLine
 sark.Function.containsAddress = function_containsAddress    
