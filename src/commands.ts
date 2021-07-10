@@ -284,4 +284,18 @@ export class Commands {
     activateDocument(doc: REDocument) {
         DocumentManager.shared.activateDocument(doc);
     }
+    
+    // Refresh various views
+    @cmd('tweakstudio.refresh-procs')
+    refreshProcs() {
+        DocumentManager.shared.refreshProcs();
+    }
+    @cmd('tweakstudio.refresh-selectors')
+    refreshStrings() {
+        DocumentManager.shared.refreshSelectors();
+    }
+    @cmd('tweakstudio.refresh-strings')
+    refreshSelectors() {
+        DocumentManager.shared.refreshStrings();
+    }
 }

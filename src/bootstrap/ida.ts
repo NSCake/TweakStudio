@@ -132,7 +132,6 @@ export default class IdaBootstrap {
             env.EXT_PORT = port;
             
             // Start IDA, wait for callback
-            window.showInformationMessage(command);
             const child = exec(command, { env: env }, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);

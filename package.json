@@ -65,6 +65,21 @@
                     "command": "tweakstudio.open",
                     "when": "view == open-documents",
                     "group": "navigation"
+                },
+                {
+                    "command": "tweakstudio.refresh-procs",
+                    "when": "view == procs",
+                    "group": "navigation"
+                },
+                {
+                    "command": "tweakstudio.refresh-selectors",
+                    "when": "view == selectors",
+                    "group": "navigation"
+                },
+                {
+                    "command": "tweakstudio.refresh-strings",
+                    "when": "view == strings",
+                    "group": "navigation"
                 }
             ],
             "view/item/context": [
@@ -118,6 +133,24 @@
             {
                 "command": "tweakstudio.activate-document",
                 "title": "Switch to Document",
+                "when": "false"
+            },
+            {
+                "command": "tweakstudio.refresh-procs",
+                "title": "Refresh Procedures",
+                "icon": "$(refresh)",
+                "when": "false"
+            },
+            {
+                "command": "tweakstudio.refresh-selectors",
+                "title": "Refresh Selectors",
+                "icon": "$(refresh)",
+                "when": "false"
+            },
+            {
+                "command": "tweakstudio.refresh-strings",
+                "title": "Refresh Strings",
+                "icon": "$(refresh)",
                 "when": "false"
             },
             {

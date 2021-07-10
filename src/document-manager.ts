@@ -348,4 +348,8 @@ export default class DocumentManager implements VSCode.TextDocumentContentProvid
         
         return code;
     }
+    
+    refreshProcs = () => this.procsProvider.refresh();
+    refreshSelectors = () => this.selectorsProvider.refresh();
+    refreshStrings = () => this.stringsProvider.refresh();
 }
